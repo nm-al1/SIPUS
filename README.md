@@ -4,24 +4,6 @@ Aplikasi manajemen perpustakaan modern berbasis fullstack web dengan arsitektur 
 
 ---
 
-## Demo lokal
-
-Klik dua kali **Mulai-Demo.cmd**, kemudian ikuti [alur demo dosen](docs/DEMO-DOSEN.md) dan [panduan Fonnte](docs/FONNTE-DEMO.md).
-
-## 🎨 Peran & Kolaborasi
-- **UI/UX Designer & Architect**: Antigravity (merancang user flow, wireframe, design tokens, frame desain di FigCraft, dan panduan handoff).
-- **Software Engineer / Implementasi Kode**: Codex.
-
----
-
-## 🎨 Integrasi FigCraft
-- **File Desain**: [`design/Sipus_base.figcraft`](design/Sipus_base.figcraft)
-- **Koneksi MCP**: Port `47800`
-- **Launcher**: Jalankan `launch-figcraft-control.bat` untuk membuka FigCraft dengan loopback control aktif agar dapat diakses oleh AI agent / Codex via MCP.
-- **Konfigurasi MCP**: [`opencode.jsonc`](opencode.jsonc)
-
----
-
 ## 🛠️ Tech Stack
 - **Frontend**: React 19, Vite, Tailwind CSS v4, Lucide Icons, Axios, React Router v7
 - **Backend**: Node.js, Express.js, CORS, Dotenv, sesi MySQL, BcryptJS
