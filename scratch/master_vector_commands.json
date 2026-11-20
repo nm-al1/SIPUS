@@ -1,0 +1,962 @@
+[
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M21 21l-5.2-5.2m0 0a7.5 7.5 0 10-10.6-10.6 7.5 7.5 0 0010.6 10.6z",
+      "parent": 3641,
+      "name": "Icon / Search_Input",
+      "x": 114,
+      "y": 729,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#52616B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M21 21l-5.2-5.2m0 0a7.5 7.5 0 10-10.6-10.6 7.5 7.5 0 0010.6 10.6z",
+      "parent": 3641,
+      "name": "Icon / Search_Btn",
+      "x": 672,
+      "y": 729,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 2
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+      "parent": 3641,
+      "name": "Icon / Badge_Akses",
+      "x": 226,
+      "y": 840,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#0F766E",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M12 22a10 10 0 100-20 10 10 0 000 20zm0-14v6l4 2",
+      "parent": 3641,
+      "name": "Icon / Badge_Pinjam",
+      "x": 410,
+      "y": 840,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#0F766E",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm-3-2v4M8 2v4M3 10h18",
+      "parent": 3641,
+      "name": "Icon / Badge_Libur",
+      "x": 594,
+      "y": 840,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#0F766E",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z",
+      "parent": 3641,
+      "name": "Icon / Badge_Notif",
+      "x": 778,
+      "y": 840,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#10B981",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_1",
+      "x": 348,
+      "y": 1040,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_2",
+      "x": 668,
+      "y": 1040,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_3",
+      "x": 988,
+      "y": 1040,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_4",
+      "x": 1308,
+      "y": 1040,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_5",
+      "x": 348,
+      "y": 1390,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_6",
+      "x": 668,
+      "y": 1390,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_7",
+      "x": 988,
+      "y": 1390,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Book_8",
+      "x": 1308,
+      "y": 1390,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#8898A1",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.6
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+      "parent": 3641,
+      "name": "Icon / Step_1_User",
+      "x": 108,
+      "y": 1830,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#0F766E",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 3641,
+      "name": "Icon / Step_2_Book",
+      "x": 108,
+      "y": 1926,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#0F766E",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z",
+      "parent": 3641,
+      "name": "Icon / Step_3_WA",
+      "x": 108,
+      "y": 2022,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#0F766E",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+      "parent": 3641,
+      "name": "Icon / Presensi_NIS",
+      "x": 884,
+      "y": 1885,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#52616B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3",
+      "parent": 3641,
+      "name": "Icon / Presensi_Btn",
+      "x": 1022,
+      "y": 1941,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 2
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 1668,
+      "name": "Icon / KPI_Pinjam",
+      "x": 520,
+      "y": 176,
+      "width": 20,
+      "height": 20,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#10B981",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M12 22a10 10 0 100-20 10 10 0 000 20zm0-14v6l4 2",
+      "parent": 1668,
+      "name": "Icon / KPI_Tempo",
+      "x": 802,
+      "y": 176,
+      "width": 20,
+      "height": 20,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#F59E0B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01",
+      "parent": 1668,
+      "name": "Icon / KPI_Terlambat",
+      "x": 1084,
+      "y": 176,
+      "width": 20,
+      "height": 20,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#EF4444",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+      "parent": 1668,
+      "name": "Icon / KPI_Kunjungan",
+      "x": 1366,
+      "y": 176,
+      "width": 20,
+      "height": 20,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#14B8A6",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M5 12h14M12 5l7 7-7 7",
+      "parent": 1668,
+      "name": "Icon / Return_Header_Btn",
+      "x": 1218,
+      "y": 116,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 2
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01",
+      "parent": 1668,
+      "name": "Icon / Row1_Late",
+      "x": 1026,
+      "y": 443,
+      "width": 14,
+      "height": 14,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#EF4444",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01",
+      "parent": 1668,
+      "name": "Icon / Row2_Late",
+      "x": 1026,
+      "y": 521,
+      "width": 14,
+      "height": 14,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#EF4444",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4m0 4h.01",
+      "parent": 1668,
+      "name": "Icon / Row3_Late",
+      "x": 1026,
+      "y": 599,
+      "width": 14,
+      "height": 14,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#EF4444",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3",
+      "parent": 1668,
+      "name": "Icon / Row4_Soon",
+      "x": 1026,
+      "y": 677,
+      "width": 14,
+      "height": 14,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#10B981",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M12 22a10 10 0 100-20 10 10 0 000 20zm0-14v6l4 2",
+      "parent": 1668,
+      "name": "Icon / Row5_Soon",
+      "x": 1026,
+      "y": 755,
+      "width": 14,
+      "height": 14,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#14B8A6",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M21 21l-5.2-5.2m0 0a7.5 7.5 0 10-10.6-10.6 7.5 7.5 0 0010.6 10.6z",
+      "parent": 1976,
+      "name": "Icon / Input_NIS",
+      "x": 324,
+      "y": 233,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#52616B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z",
+      "parent": 1976,
+      "name": "Icon / Input_Book",
+      "x": 324,
+      "y": 604,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#52616B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3",
+      "parent": 1976,
+      "name": "Icon / Confirm_Borrow",
+      "x": 1028,
+      "y": 703,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 2
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M12 22a10 10 0 100-20 10 10 0 000 20zm0-14v6l4 2",
+      "parent": 2063,
+      "name": "Icon / Simpan_Fisik",
+      "x": 1018,
+      "y": 409,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#F59E0B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M22 11.08V12a10 10 0 11-5.93-9.14M22 4L12 14.01l-3-3",
+      "parent": 2063,
+      "name": "Icon / Confirm_Return",
+      "x": 1004,
+      "y": 727,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 2
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+      "parent": 1630,
+      "name": "Icon / Login_User",
+      "x": 512,
+      "y": 420,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#52616B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zm-7 4v2M7 11V7a5 5 0 0110 0v4",
+      "parent": 1630,
+      "name": "Icon / Login_Lock",
+      "x": 512,
+      "y": 512,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#52616B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M5 12h14M12 5l7 7-7 7",
+      "parent": 1630,
+      "name": "Icon / Login_Arrow",
+      "x": 836,
+      "y": 587,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 2
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M21 21l-5.2-5.2m0 0a7.5 7.5 0 10-10.6-10.6 7.5 7.5 0 0010.6 10.6z",
+      "parent": 1482,
+      "name": "Icon / Search_Catalog_Page",
+      "x": 110,
+      "y": 208,
+      "width": 16,
+      "height": 16,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#52616B",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M21 21l-5.2-5.2m0 0a7.5 7.5 0 10-10.6-10.6 7.5 7.5 0 0010.6 10.6z",
+      "parent": 1482,
+      "name": "Icon / Search_Catalog_Btn",
+      "x": 684,
+      "y": 208,
+      "width": 14,
+      "height": 14,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 2
+      }
+    }
+  },
+  {
+    "command": "vector.create",
+    "params": {
+      "path": "M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6z",
+      "parent": 2243,
+      "name": "Icon / Print_Report_Btn",
+      "x": 366,
+      "y": 692,
+      "width": 18,
+      "height": 18,
+      "props": {
+        "strokes": [
+          {
+            "type": "solid",
+            "color": "#FFFFFF",
+            "opacity": 1,
+            "visible": true,
+            "blend": "normal"
+          }
+        ],
+        "strokeWeight": 1.8
+      }
+    }
+  }
+]
