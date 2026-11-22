@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { reducedMotionQuery } from '../services/reducedMotion';
 import library from '../assets/foto landing page/landing1.jpg';
 import school from '../assets/foto landing page/landing2.jpg';
 import students from '../assets/foto landing page/landing3.jpg';
@@ -10,14 +11,39 @@ const photos = [
   { src: library, scene: 'library' },
   { src: school, scene: 'school' },
 ];
-const reducedMotion = '(prefers-reduced-motion: reduce)';
 
 export default function LandingHero() {
   const [slide, setSlide] = useState({ current: 0, previous: null });
+  const photoTrack = useRef(null);
+  const animator = useRef(null);
   const { current, previous } = slide;
 
+  useLayoutEffect(() => {
+    const preference = window.matchMedia(reducedMotionQuery);
+    if (previous === null || preference.matches || !animator.current) return;
+    const tween = animator.current.fromTo(
+      photoTrack.current.children[current],
+      { xPercent: 100 },
+      { xPercent: 0, duration: 0.65, ease: 'power3.out' },
+    );
+    const finishIfReduced = () => {
+      if (preference.matches) tween.progress(1);
+    };
+    preference.addEventListener('change', finishIfReduced);
+    return () => {
+      preference.removeEventListener('change', finishIfReduced);
+      tween.revert();
+    };
+  }, [current, previous]);
+
   useEffect(() => {
-    const preference = window.matchMedia(reducedMotion);
+    const preference = window.matchMedia(reducedMotionQuery);
+    let mounted = true;
+    import('gsap')
+      .then(({ gsap }) => {
+        if (mounted) animator.current = gsap;
+      })
+      .catch((error) => console.error('Animasi foto gagal dimuat.', error));
     const timer = window.setInterval(() => {
       if (!preference.matches) {
         setSlide(({ current: index }) => ({
@@ -26,24 +52,21 @@ export default function LandingHero() {
         }));
       }
     }, 5000);
-    return () => window.clearInterval(timer);
+    return () => {
+      mounted = false;
+      window.clearInterval(timer);
+    };
   }, []);
 
   return (
     <section className="hero" aria-labelledby="landing-title">
-      <div className="hero-photos" aria-hidden="true">
+      <div ref={photoTrack} className="hero-photos" aria-hidden="true">
         {photos.map(({ src, scene }, index) => (
           <div
             key={src}
             style={scene === 'library' ? { '--hero-photo-backdrop': 'url("' + src + '")' } : undefined}
             className={'hero-photo hero-photo-' + scene + ' ' + (
-              index === current
-                ? previous === null
-                  ? 'is-current'
-                  : 'is-current is-entering'
-                : index === previous
-                  ? 'is-previous'
-                  : ''
+              index === current ? 'is-current' : index === previous ? 'is-previous' : ''
             )}
           >
             <img src={src} alt="" fetchPriority={index === 0 ? 'high' : 'low'} />
@@ -66,9 +89,9 @@ export default function LandingHero() {
             <Link className="btn" to="/katalog">
               Buka katalog <ArrowRight size={17} aria-hidden="true" />
             </Link>
-            <a className="btn hero-secondary" href="#aturan">
+            <Link className="btn hero-secondary" to="/#aturan">
               Cara meminjam
-            </a>
+            </Link>
           </div>
         </div>
       </div>

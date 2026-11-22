@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import BookCover from '../components/BookCover';
+import { animate } from 'motion/mini';
 import {
   Link,
   NavLink,
@@ -16,6 +17,8 @@ import {
   LogIn,
   MapPin,
 } from 'lucide-react';
+import Lenis from 'lenis';
+import 'lenis/dist/lenis.css';
 import {
   Brand,
   Dialog,
@@ -28,6 +31,7 @@ import {
   useData,
 } from '../components/Common';
 import api from '../services/api';
+import { usePrefersReducedMotion } from '../services/reducedMotion';
 import LandingHero from '../components/LandingHero';
 
 const staffLink = () =>
@@ -36,12 +40,7 @@ const staffLink = () =>
     : { to: '/login', label: 'Login petugas' };
 
 function RulesLink() {
-  const { pathname } = useLocation();
-  return pathname === '/' ? (
-    <a href="#aturan">Aturan peminjaman</a>
-  ) : (
-    <Link to="/#aturan">Aturan peminjaman</Link>
-  );
+  return <Link to="/#aturan">Aturan peminjaman</Link>;
 }
 
 function BorrowingGuide() {
@@ -50,6 +49,7 @@ function BorrowingGuide() {
       id="aturan"
       className="landing-rules"
       aria-labelledby="aturan-judul"
+      tabIndex={-1}
     >
       <div className="landing-guide">
         <h2 id="aturan-judul">Cara meminjam buku</h2>
@@ -126,21 +126,30 @@ function PublicFooter() {
           <RulesLink />
           <Link to={staff.to}>{staff.label}</Link>
         </nav>
-        <a className="back-to-top" href="#atas">
+        <Link className="back-to-top" to="/#atas">
           Kembali ke atas <ArrowUp size={16} aria-hidden="true" />
-        </a>
+        </Link>
       </div>
     </footer>
   );
 }
 function CatalogGrid({ books, onPick, compact = false, empty = 'Tidak ada judul yang cocok. Ubah kata kunci atau reset filter.' }) {
+  const reduceMotion = usePrefersReducedMotion();
+  const animateResult = useCallback((element) => {
+    if (!element || reduceMotion) return;
+    const entrance = animate(element, {
+      opacity: [0.7, 1],
+      transform: ['translateY(4px)', 'none'],
+    }, { duration: 0.18, ease: [0.22, 1, 0.36, 1] });
+    return () => entrance.cancel();
+  }, [reduceMotion]);
   if (!books.length) {
     return <p className="empty" role="status">{empty}</p>;
   }
   return (
     <ul className={'catalog-grid' + (compact ? ' catalog-grid-compact' : '')} role="list" aria-label="Daftar koleksi">
       {books.map((item) => (
-        <li key={item.id}>
+        <li key={item.id} ref={compact ? animateResult : undefined}>
           <button
             className="catalog-book"
             type="button"
@@ -163,6 +172,39 @@ function CatalogGrid({ books, onPick, compact = false, empty = 'Tidak ada judul 
     </ul>
   );
 }
+
+function useLandingScroll(enabled, loading) {
+  const { hash, key } = useLocation();
+  const reduceMotion = usePrefersReducedMotion();
+  const lenis = useRef(null);
+  const targetReady = hash !== '#aturan' || !loading;
+
+  useEffect(() => {
+    if (!enabled || reduceMotion) return;
+    const instance = new Lenis({ autoRaf: true });
+    lenis.current = instance;
+    return () => {
+      instance.destroy();
+      lenis.current = null;
+    };
+  }, [enabled, reduceMotion]);
+
+  useEffect(() => {
+    if (!enabled || !hash) return;
+    const target = document.getElementById(hash.slice(1));
+    if (!target) return;
+
+    target.focus({ preventScroll: true });
+    if (lenis.current) {
+      lenis.current.resize();
+      lenis.current.scrollTo(target, { duration: 0.65 });
+    } else {
+      target.scrollIntoView();
+    }
+    // Koleksi berada di atas aturan, jadi posisinya berubah saat data selesai dimuat.
+  }, [enabled, hash, key, targetReady]);
+}
+
 export function Public({ catalog = false }) {
   const resultsHeading = useRef(null);
   const detailTrigger = useRef(null);
@@ -181,6 +223,7 @@ export function Public({ catalog = false }) {
   }
   const [version, refresh] = useState(0),
     { data, error, loading } = useData(['/catalog'], version);
+  useLandingScroll(!catalog, loading);
   const query = catalog ? params.get('q') || '' : search.trim();
   const category = catalog ? params.get('kategori') || '' : '';
   const available = catalog && params.get('tersedia') === '1';

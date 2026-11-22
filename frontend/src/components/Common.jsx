@@ -1,9 +1,11 @@
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, X, Search } from 'lucide-react';
+import { animate } from 'motion/mini';
 import emblem from '../assets/logo/lambang.png';
 import wordmark from '../assets/logo/wordmark.png';
 import api from '../services/api';
+import { usePrefersReducedMotion } from '../services/reducedMotion';
 
 export function Brand({ school = false }) {
   return (
@@ -91,16 +93,26 @@ export function LoanStatus({ state }) {
 export function Dialog({ title, onClose, children, wide = false }) {
   const ref = useRef(null);
   const titleId = useId();
-  useEffect(() => {
+  const reduceMotion = usePrefersReducedMotion();
+  useLayoutEffect(() => {
     const el = ref.current;
     el.showModal();
     return () => el.close();
   }, []);
+  useLayoutEffect(() => {
+    if (reduceMotion) return;
+    const entrance = animate(ref.current, {
+      opacity: [0, 1],
+      transform: ['translateY(6px) scale(0.985)', 'none'],
+    }, { duration: 0.2, ease: [0.22, 1, 0.36, 1] });
+    return () => entrance.cancel();
+  }, [reduceMotion]);
   return (
     <dialog
       ref={ref}
       className={wide ? 'dialog-wide' : undefined}
       aria-labelledby={titleId}
+      data-lenis-prevent
       onCancel={(event) => {
         event.preventDefault();
         onClose();

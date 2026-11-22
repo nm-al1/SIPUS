@@ -225,15 +225,13 @@ function Workspace({ screen }) {
 function NavigationScroll() {
   const { pathname, hash } = useLocation();
   const navigation = useNavigationType();
-  const previous = useRef(null);
+  const previousPath = useRef(null);
 
   useEffect(() => {
-    const last = previous.current;
-    previous.current = { pathname, hash };
-    if (hash && (last?.pathname !== pathname || last?.hash !== hash)) {
-      document.getElementById(hash.slice(1))?.scrollIntoView();
-    } else if (last && last.pathname !== pathname && navigation !== 'POP') {
-      window.scrollTo({ top: 0, left: 0 });
+    const last = previousPath.current;
+    previousPath.current = pathname;
+    if (!hash && last && last !== pathname && navigation !== 'POP') {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     }
   }, [pathname, hash, navigation]);
 
