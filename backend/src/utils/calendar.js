@@ -14,33 +14,41 @@ function shift(day, n) {
   d.setUTCDate(d.getUTCDate() + n);
   return d.toISOString().slice(0, 10);
 }
-function school(day) {
-  const weekday = new Date(day + 'T00:00:00Z').getUTCDay();
-  return weekday !== 0 && weekday !== 6 && !holidays.has(day);
+async function loadCalendar(db = require('../config/db').pool, lock = '') {
+  const [[row]] = await db.query('SELECT holidays FROM school_calendar WHERE id=1 ' + lock);
+  return row.holidays;
 }
-function due(start) {
+function school(day, extra) {
+  const weekday = new Date(day + 'T00:00:00Z').getUTCDay();
+  return weekday !== 0 && weekday !== 6 && !holidays.has(day) && !Object.hasOwn(extra || {}, day);
+}
+function due(start, extra) {
   let day = start;
   let counted = 0;
   while (true) {
-    if (school(day) && ++counted === 5) return day;
+    if (school(day, extra) && ++counted === 5) return day;
     day = shift(day, 1);
   }
 }
-function nextSchoolDay(day) {
+function nextSchoolDay(day, extra) {
   do {
     day = shift(day, 1);
-  } while (!school(day));
+  } while (!school(day, extra));
   return day;
 }
-function reminderDay(dueDate) {
+function addSchoolDays(day, count, extra) {
+  for (let i = 0; i < count; i++) day = nextSchoolDay(day, extra);
+  return day;
+}
+function reminderDay(dueDate, extra) {
   let day = shift(dueDate, -1);
-  while (!school(day)) day = shift(day, -1);
+  while (!school(day, extra)) day = shift(day, -1);
   return day;
 }
-function lateDays(dueDate, day) {
+function lateDays(dueDate, day, extra) {
   let count = 0;
   for (let d = shift(dueDate, 1); d <= day; d = shift(d, 1))
-    if (school(d)) count++;
+    if (school(d, extra)) count++;
   return count;
 }
 module.exports = {
@@ -49,6 +57,8 @@ module.exports = {
   school,
   due,
   nextSchoolDay,
+  addSchoolDays,
   reminderDay,
   lateDays,
+  loadCalendar,
 };

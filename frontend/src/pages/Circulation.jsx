@@ -9,6 +9,7 @@ import {
   UserRound,
 } from 'lucide-react';
 import api from '../services/api';
+import BookPicker from '../components/BookPicker';
 import {
   date,
   rupiah,
@@ -24,31 +25,23 @@ export function Borrow({ members, books, loans, calendar, reload }) {
   const [nis, setNis] = useState(''),
     [verified, verify] = useState(''),
     [bookId, setBook] = useState(''),
-    [bookSearch, setBookSearch] = useState(''),
     [quantity, setQty] = useState('1'),
     [error, setError] = useState(''),
     [busy, setBusy] = useState(false);
   const student = members.find((m) => m.member_code === verified && verified),
     book = books.find((b) => String(b.id) === bookId);
-  const debt =
-    student &&
-    loans.find(
-      (l) =>
-        l.member_id === student.id &&
-        ['Terlambat', 'Menunggu pelunasan'].includes(l.state),
-    );
-  const eligible = student?.status === 'active' && !debt;
+  const active = loans.filter((l) => l.member_id === student?.id && l.state !== 'Selesai');
+  const debts = active.filter((l) => ['Terlambat', 'Menunggu pelunasan'].includes(l.state));
+  const held = active.reduce((sum, l) => sum + (l.received_date ? 0 : l.quantity), 0);
+  const remaining = Math.max(0, 3 - held);
+  const eligible = student?.status === 'active' && !debts.length && remaining > 0;
   const availableBooks = books.filter((b) => !b.archived && b.stock > 0);
-  const bookOptions = availableBooks.filter(
-    (b) =>
-      String(b.id) === bookId ||
-      matches(bookSearch, b.title, b.author, b.isbn, b.shelf),
-  );
+  const max = Math.min(remaining, book?.stock || 0);
   const validQuantity =
     book &&
     Number.isInteger(+quantity) &&
     quantity >= 1 &&
-    quantity <= book.stock;
+    quantity <= max;
   async function save() {
     setBusy(true);
     setError('');
@@ -93,6 +86,9 @@ export function Borrow({ members, books, loans, calendar, reload }) {
               onChange={(e) => {
                 setNis(e.target.value);
                 verify('');
+                setBook('');
+                setQty('1');
+                setError('');
               }}
             />
           </Field>
@@ -107,25 +103,27 @@ export function Borrow({ members, books, loans, calendar, reload }) {
               <p>
                 NIS {student.member_code} · {student.class_name}
               </p>
+              <p>Sedang dipegang {held} dari 3 eksemplar · Sisa kuota {remaining}</p>
               <Status error={!eligible}>
                 {student.status !== 'active'
                   ? 'Status siswa nonaktif.'
-                  : debt
-                    ? 'Peminjaman diblokir sampai tunggakan diselesaikan.'
-                    : 'Siswa aktif dan layak meminjam.'}
+                  : debts.length
+                    ? 'Selesaikan semua tunggakan sebelum meminjam lagi.'
+                    : remaining === 0 ? 'Kuota peminjaman penuh.' : 'Siswa aktif dan layak meminjam.'}
               </Status>
-              {debt && (
+              {debts.map((debt) => (
                 <Link
+                  key={debt.id}
                   className="collection-link"
                   to={
                     '/sirkulasi/kembali?q=' +
                     encodeURIComponent(debt.borrow_code)
                   }
                 >
-                  Lihat pinjaman terkait{' '}
+                  {debt.title} · {rupiah(debt.fine)}{' '}
                   <ArrowRight size={16} aria-hidden="true" />
                 </Link>
-              )}
+              ))}
             </div>
           ) : (
             <Status error>NIS tidak ditemukan.</Status>
@@ -134,44 +132,36 @@ export function Borrow({ members, books, loans, calendar, reload }) {
         <h2 className="panel-title">
           <BookOpen size={21} aria-hidden="true" /> Pilih koleksi
         </h2>
-        {!eligible && (
+        {!student && (
           <p>Verifikasi NIS siswa yang layak meminjam untuk memilih buku.</p>
         )}
         <fieldset disabled={!eligible || busy} className="book-selection">
-          <SearchBox
-            value={bookSearch}
-            onChange={setBookSearch}
-            placeholder="Saring judul, penulis, ISBN, atau rak"
-          />
           <div className="loan-fields">
-            <Field label="Buku">
-              <select value={bookId} onChange={(e) => setBook(e.target.value)}>
-                <option value="">Pilih judul buku</option>
-                {bookOptions.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.title} · {b.stock} tersedia
-                  </option>
-                ))}
-              </select>
-            </Field>
+            <BookPicker
+              books={availableBooks}
+              selected={book}
+              onPick={(item) => {
+                setBook(String(item.id));
+                setQty('1');
+                setError('');
+              }}
+            />
             <Field label="Jumlah eksemplar">
               <input
                 type="number"
                 min="1"
-                max={book?.stock}
+                max={max || 1}
+                disabled={!book}
                 value={quantity}
                 onChange={(e) => setQty(e.target.value)}
               />
             </Field>
           </div>
-          {eligible && !bookOptions.length && (
-            <p role="status">Tidak ada buku tersedia yang cocok.</p>
-          )}
           {book && (
             <p className={!validQuantity ? 'field-error' : undefined}>
               {!validQuantity && 'Periksa jumlah yang dipilih. '}
               Tersedia {book.stock} eksemplar
-              {book.shelf ? ' di rak ' + book.shelf : ''}.
+              {book.shelf ? ' di rak ' + book.shelf : ''}. Maksimal {max} untuk pinjaman ini.
             </p>
           )}
         </fieldset>
@@ -249,6 +239,8 @@ export function Returns({ loans, reload }) {
       </div>
       <section className="panel flush">
         <Table
+          pageSize={10}
+          filterKey={JSON.stringify([q, filter])}
           label="Daftar pengembalian"
           empty="Tidak ada pinjaman untuk pencarian dan status ini."
           headers={[

@@ -10,6 +10,8 @@ import {
   matches,
 } from '../components/Common';
 import api from '../services/api';
+import BookCover from '../components/BookCover';
+import StudentExcel from '../components/StudentExcel';
 
 const bookFields = [
   ['title', 'Judul buku'],
@@ -30,6 +32,7 @@ const studentFields = [
 export default function Master({ students = false, data, reload }) {
   const [q, setQ] = useState(''),
     [status, setStatus] = useState(''),
+    [classFilter, setClassFilter] = useState(''),
     [edit, setEdit] = useState(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
@@ -86,6 +89,7 @@ export default function Master({ students = false, data, reload }) {
   }
   const filtered = data.filter(
     (r) =>
+      (!students || !classFilter || r.class_name === classFilter) &&
       (!status ||
         (students
           ? r.status === status
@@ -135,16 +139,27 @@ export default function Master({ students = false, data, reload }) {
             </>
           )}
         </select>
+        {students && (
+          <select aria-label="Kelas" value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
+            <option value="">Semua kelas</option>
+            {[...new Set(data.map((r) => r.class_name).filter(Boolean))]
+              .sort((a, b) => a.localeCompare(b, 'id'))
+              .map((name) => <option key={name}>{name}</option>)}
+          </select>
+        )}
         <button onClick={() => begin({})}>
           <Plus size={18} />
           Tambah {label}
         </button>
       </div>
+      {students && <StudentExcel students={filtered} reload={reload} />}
       <section className="panel flush">
         <Table
+          pageSize={10}
+          filterKey={JSON.stringify([q, status, classFilter])}
           label={students ? 'Daftar siswa' : 'Daftar koleksi dan stok'}
           empty={
-            q || status
+            q || status || classFilter
               ? 'Tidak ada hasil untuk pencarian dan filter ini.'
               : 'Belum ada ' + label + ' terdaftar.'
           }
@@ -184,13 +199,13 @@ export default function Master({ students = false, data, reload }) {
                     </Tag>,
                   ]
                 : [
-                    <>
-                      <b>{r.title}</b>
-                      <small>
-                        {r.author}
-                        {r.archived ? ' · Diarsipkan' : ''}
-                      </small>
-                    </>,
+                    <div className="book-cell">
+                      <BookCover book={r} />
+                      <div>
+                        <b>{r.title}</b>
+                        <small>{r.author}{r.archived ? ' · Diarsipkan' : ''}</small>
+                      </div>
+                    </div>,
                     r.shelf || '—',
                     r.total,
                     r.borrowed,

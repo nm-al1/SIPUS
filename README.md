@@ -4,6 +4,14 @@ Aplikasi manajemen perpustakaan modern berbasis fullstack web dengan arsitektur 
 
 ---
 
+## Setup dan sampul buku
+
+Jika menjalankan server secara manual setelah pembaruan, jalankan `npm.cmd ci` dan `npm.cmd run setup` di folder `backend` sebelum menyalakannya kembali. Bangun ulang frontend dengan `npm.cmd run build` dari folder `frontend`.
+
+Simpan sampul di `frontend/src/assets/sampul-buku` dengan nama sesuai ISBN atau kode koleksi, misalnya `DEMO-1.jpg`. Aplikasi mencocokkan nama tanpa spasi, tanda hubung, atau perbedaan huruf kapital. Bangun ulang frontend untuk memuat sampul baru.
+
+---
+
 ## 🛠️ Tech Stack
 - **Frontend**: React 19, Vite, Tailwind CSS v4, Lucide Icons, Axios, React Router v7
 - **Backend**: Node.js, Express.js, CORS, Dotenv, sesi MySQL, BcryptJS

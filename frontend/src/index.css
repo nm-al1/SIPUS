@@ -834,7 +834,6 @@ aside nav a.active,
 .table-scroll:focus-visible {
   outline-offset: -3px;
 }
-.catalog-table table,
 .workspace .flush table {
   min-width: 560px;
 }
@@ -1283,6 +1282,139 @@ dialog[open] {
     padding-inline: 8px;
   }
 }
+.book-picker { position: relative; min-width: 0; }
+.book-picker-popup {
+  position: absolute;
+  z-index: 4;
+  inset: 100% 0 auto;
+  background: white;
+  border: 1px solid #b6c8cd;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px #15364022;
+}
+.book-picker-popup ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 16rem;
+  overflow: auto;
+}
+.book-picker-popup li { padding: 9px 12px; cursor: pointer; overflow-wrap: anywhere; }
+.book-picker-popup small { display: block; }
+.book-picker-popup li:is(:hover, [aria-selected="true"]) { background: #e6f3ef; }
+.book-picker-popup p { margin: 10px 12px; }
+.pagination, .pagination-controls, .pagination-numbers, .inline-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pagination { justify-content: space-between; padding: 10px 14px; font-size: .875rem; }
+.pagination-controls { gap: 6px; }
+.pagination-numbers { justify-content: center; gap: 4px; }
+.pagination-number { min-width: 44px; padding-inline: 8px; font-variant-numeric: tabular-nums; }
+.pagination-number[aria-current='page'] { background: var(--teal); border-color: var(--teal); color: #fff; }
+.pagination-number[aria-current='page']:hover { background: #095e59; }
+.pagination-gap { padding-inline: 3px; color: var(--muted); }
+.pagination-direction svg { display: none; }
+@media (max-width: 560px) {
+  .pagination-controls {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    width: 100%;
+    gap: 4px;
+  }
+  .pagination-direction { width: 44px; padding-inline: 0; }
+  .pagination-direction svg { display: block; }
+  .pagination-direction span { display: none; }
+}
+.excel-actions { margin: 0 0 12px; }
+.book-cell { display: flex; align-items: center; gap: 10px; }
+.book-detail-cover { align-items: flex-start; overflow-wrap: anywhere; }
+.book-cover {
+  display: inline-grid;
+  width: 30px;
+  height: 42px;
+  flex: 0 0 auto;
+  border-radius: 3px;
+  object-fit: contain;
+  place-items: center;
+  background: #e7f1ee;
+  color: #20645c;
+}
+.book-cover-detail { width: 100px; height: 142px; }
+.catalog-results-heading { scroll-margin-top: 155px; }
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.catalog-book {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  background: #fff;
+  color: inherit;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-align: left;
+}
+.catalog-book:hover { background: #fff; border-color: var(--teal); }
+.catalog-book:active { background: #f0f7f4; }
+.catalog-cover-stage {
+  display: grid;
+  place-items: center;
+  padding: 17px 8px;
+  background: #eaf0ee;
+  border-bottom: 1px solid var(--line);
+  border-radius: 9px 9px 0 0;
+}
+.book-cover-grid {
+  width: min(70%, 160px);
+  height: auto;
+  aspect-ratio: 160 / 226;
+  box-shadow: 0 4px 9px #102a2d29;
+}
+.catalog-book-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  padding: 14px;
+  overflow-wrap: anywhere;
+}
+.catalog-book-info strong { font-size: 1.07rem; }
+.catalog-book-author,
+.catalog-book-meta { color: var(--muted); font-size: .875rem; font-weight: 400; }
+.catalog-book-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+  margin-top: auto;
+  padding-top: 8px;
+}
+@media (max-width: 740px) {
+  .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .catalog-cover-stage { padding-block: 12px; }
+  .catalog-book-info { padding: 10px; }
+  .catalog-book-info strong { font-size: .96rem; }
+}
+.letterhead { display: flex; align-items: center; gap: 12px; }
+.letterhead img { object-fit: contain; }
+.print-only { display: none; }
+@media (max-width: 560px) {
+  .loan-fields { grid-template-columns: 1fr; }
+}
 @page {
   size: A4 portrait;
   margin: 14mm;
@@ -1305,6 +1437,11 @@ dialog[open] {
   .notice {
     display: none !important;
   }
+  .screen-only { display: none !important; }
+  .print-only { display: block; }
+  .workmain > .paper { animation: none; }
+  .print-letterhead > td { padding: 0 0 10px; }
+  .paper .print-signatures > td { border: 0; padding: 0; }
   .workmain,
   .paper {
     padding: 0;

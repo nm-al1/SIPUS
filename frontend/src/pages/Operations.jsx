@@ -22,6 +22,14 @@ import {
   useData,
 } from '../components/Common';
 import api from '../services/api';
+import emblem from '../assets/logo/lambang.png';
+const schoolName = 'Perpustakaan SMK Mutiara Ilmu Makassar';
+const letterhead = (
+  <div className="letterhead">
+    <img src={emblem} alt="" width={40} height={40} />
+    <strong>{schoolName}</strong>
+  </div>
+);
 export function Dashboard({ dashboard }) {
   const { needs, titles, students, copies, fine } = dashboard;
   return (
@@ -48,6 +56,7 @@ export function Dashboard({ dashboard }) {
           </Link>
         </div>
         <Table
+          pageSize={10}
           label="Tindak lanjut pinjaman"
           headers={['Siswa', 'Judul buku', 'Jatuh tempo', 'Status', 'Tindakan']}
           rows={needs.map((l) => ({
@@ -144,6 +153,8 @@ export function WhatsApp({ info, reload }) {
       </div>
       <section className="panel flush">
         <Table
+          pageSize={10}
+          filterKey={JSON.stringify([query, state])}
           label="Riwayat pengiriman WhatsApp"
           headers={[
             'Pinjaman',
@@ -244,6 +255,23 @@ export function Reports() {
         id: b.id,
         cells: [b.title, b.shelf || '—', b.total, b.borrowed, b.lost, b.stock],
       }));
+  const reportHeading = (
+    <>
+      <h2>Laporan {kind.toLowerCase()}</h2>
+      <p>
+        {circulation
+          ? 'Periode pinjam ' + (from ? date(from) : 'awal pencatatan') + ' – ' + (to ? date(to) : 'sekarang')
+          : 'Posisi stok saat laporan dibuka'}
+      </p>
+      <small>Dicetak {new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })} WITA · {rows.length} data</small>
+    </>
+  );
+  const signatures = (
+    <div className="signatures">
+      <span>Kepala sekolah</span>
+      <span>Petugas perpustakaan</span>
+    </div>
+  );
   return (
     <>
       <div className="panel toolbar filters">
@@ -287,36 +315,25 @@ export function Reports() {
         <p role="status">Memuat laporan…</p>
       ) : (
         <article className="paper">
-          <div className="letterhead">
-            PERPUSTAKAAN SMK MUTIARA ILMU MAKASSAR
-          </div>
-          <h2>Laporan {kind.toLowerCase()}</h2>
-          <p>
-            {circulation
-              ? 'Periode pinjam ' +
-                (from ? date(from) : 'awal pencatatan') +
-                ' – ' +
-                (to ? date(to) : 'sekarang')
-              : 'Posisi stok saat laporan dibuka'}
-          </p>
-          <small>
-            Dicetak{' '}
-            {new Date().toLocaleString('id-ID', { timeZone: 'Asia/Makassar' })}{' '}
-            WITA · {rows.length} data
-          </small>
-          <Table
-            headers={
-              circulation
-                ? ['Kode', 'Siswa', 'Buku', 'Jml', 'Pinjam', 'Status', 'Denda']
-                : ['Judul', 'Rak', 'Total', 'Dipinjam', 'Hilang', 'Tersedia']
-            }
-            rows={rows}
-            empty="Tidak ada data untuk periode ini."
-          />
-          <div className="signatures">
-            <span>Kepala sekolah</span>
-            <span>Petugas perpustakaan</span>
-          </div>
+          <div className="screen-only">{letterhead}</div>
+          {['screen-only', 'print-only'].map((mode) => (
+            <div className={mode} key={mode}>
+              {mode === 'screen-only' && reportHeading}
+              <Table
+                label={mode === 'screen-only' ? 'Data laporan' : undefined}
+                pageSize={mode === 'screen-only' ? 10 : undefined}
+                filterKey={JSON.stringify([kind, from, to])}
+                printHeader={mode === 'print-only' ? <>{letterhead}{reportHeading}</> : undefined}
+                printFooter={mode === 'print-only' ? signatures : undefined}
+                headers={circulation
+                  ? ['Kode', 'Siswa', 'Buku', 'Jml', 'Pinjam', 'Status', 'Denda']
+                  : ['Judul', 'Rak', 'Total', 'Dipinjam', 'Hilang', 'Tersedia']}
+                rows={rows}
+                empty="Tidak ada data untuk periode ini."
+              />
+            </div>
+          ))}
+          <div className="screen-only">{signatures}</div>
         </article>
       )}
     </>

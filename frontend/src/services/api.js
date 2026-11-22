@@ -19,9 +19,12 @@ api.interceptors.response.use(
       if (location.pathname !== '/login') location.assign('/login');
     }
     return Promise.reject(
-      new Error(
-        error.response?.data?.message ||
-          'Server tidak dapat dihubungi. Periksa koneksi, lalu coba lagi.',
+      Object.assign(
+        new Error(
+          error.response?.data?.message ||
+            'Server tidak dapat dihubungi. Periksa koneksi, lalu coba lagi.',
+        ),
+        { preview: error.response?.data?.preview },
       ),
     );
   },

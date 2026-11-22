@@ -1,5 +1,5 @@
 const { pool, transaction } = require('../src/config/db');
-const { wita, nextSchoolDay, school, shift } = require('../src/utils/calendar');
+const { wita, nextSchoolDay, school, shift, loadCalendar } = require('../src/utils/calendar');
 const { tick, deviceToken, checkDevice } = require('../src/reminders');
 
 async function preflight() {
@@ -17,11 +17,12 @@ async function preflight() {
 }
 
 async function prepareLoan(day, newRecipient) {
-  const due = nextSchoolDay(day);
-  if (!school(day)) throw Error('Jalankan uji H-1 pada hari sekolah.');
   const scheduledCode = 'DEMO-WA-' + day;
   const code = newRecipient ? scheduledCode + '-BARU' : scheduledCode;
   return transaction(async (db) => {
+    const holidays = await loadCalendar(db, 'FOR SHARE');
+    const due = nextSchoolDay(day, holidays);
+    if (!school(day, holidays)) throw Error('Jalankan uji H-1 pada hari sekolah.');
     const [[member]] = await db.execute(
       "SELECT * FROM members WHERE member_code='240103' FOR UPDATE",
     );
@@ -70,7 +71,7 @@ async function prepareLoan(day, newRecipient) {
     let start = due;
     for (let n = 1; n < 5; ) {
       start = shift(start, -1);
-      if (school(start)) n++;
+      if (school(start, holidays)) n++;
     }
     return (
       await db.execute(

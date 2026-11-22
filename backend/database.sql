@@ -2,6 +2,11 @@
 CREATE DATABASE IF NOT EXISTS perpusku_db;
 USE perpusku_db;
 
+CREATE TABLE IF NOT EXISTS school_calendar (
+  id TINYINT PRIMARY KEY,
+  holidays JSON NOT NULL
+);
+
 -- Tabel Pengguna (Admin & Petugas)
 CREATE TABLE IF NOT EXISTS users (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -60,6 +65,8 @@ CREATE TABLE IF NOT EXISTS borrowings (
   user_id INT NOT NULL, -- Petugas yang melayani
   borrow_date DATE NOT NULL,
   due_date DATE NOT NULL,
+  extension_days SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  extension_base_date DATE NULL,
   return_date DATE NULL,
   fine_amount DECIMAL(10,2) DEFAULT 0.00,
   status ENUM('borrowed', 'returned', 'overdue') DEFAULT 'borrowed',

@@ -19,6 +19,7 @@ import {
   FileText,
   BookDown,
   BookUp,
+  CalendarDays,
   ArrowUpRight,
   Menu,
   X,
@@ -27,6 +28,7 @@ import { Brand, Status, useData } from './components/Common';
 import { Public, Login } from './pages/Public';
 import Master from './pages/Master';
 import { Borrow, Returns } from './pages/Circulation';
+import ActiveLoans from './pages/ActiveLoans';
 import { Dashboard, Reports, WhatsApp } from './pages/Operations';
 import api from './services/api';
 const screens = [
@@ -45,6 +47,14 @@ const screens = [
     'Verifikasi siswa, pilih koleksi, lalu konfirmasi transaksi.',
     BookUp,
     ['members', 'books', 'loans', 'calendar'],
+  ],
+  [
+    '/sirkulasi/aktif',
+    'Pinjaman Aktif',
+    'Pinjaman Aktif',
+    'Lihat buku yang masih dipegang siswa dan kelola batas pengembaliannya.',
+    CalendarDays,
+    ['loans/active', 'calendar'],
   ],
   [
     '/sirkulasi/kembali',
@@ -118,6 +128,8 @@ function Workspace({ screen }) {
         return <Dashboard {...props} />;
       case '/sirkulasi/pinjam':
         return <Borrow {...props} reload={reload} />;
+      case '/sirkulasi/aktif':
+        return <ActiveLoans loans={props['loans/active']} calendar={props.calendar} reload={reload} />;
       case '/sirkulasi/kembali':
         return <Returns {...props} reload={reload} />;
       case '/buku':
@@ -236,6 +248,7 @@ export default function App() {
         <Route path="/" element={<Public key="home" />} />
         <Route path="/katalog" element={<Public key="catalog" catalog />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/kalender" element={<Navigate to="/sirkulasi/aktif" replace />} />
         {screens.map((s) => (
           <Route path={s[0]} key={s[0]} element={<Guard screen={s} />} />
         ))}

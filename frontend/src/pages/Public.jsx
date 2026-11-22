@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import BookCover from '../components/BookCover';
 import {
   Link,
   NavLink,
@@ -23,7 +24,7 @@ import {
   SearchBox,
   Status,
   Tag,
-  Table,
+  PaginatedList,
   matches,
   useData,
 } from '../components/Common';
@@ -137,7 +138,7 @@ function Cards({ books, onPick }) {
   return (
     <div className="cards">
       {books.map((b) => (
-        <button className="bookcard" key={b.id} onClick={() => onPick(b)}>
+        <button className="bookcard" key={b.id} onClick={(e) => onPick(b, e.currentTarget)}>
           <span className="bookmeta">
             <BookOpen size={17} aria-hidden="true" />
             {b.shelf ? 'Rak ' + b.shelf : b.category || 'Koleksi umum'}
@@ -155,11 +156,53 @@ function Cards({ books, onPick }) {
     </div>
   );
 }
+function CatalogGrid({ books, onPick }) {
+  if (!books.length) {
+    return <p className="empty">Tidak ada judul yang cocok. Ubah kata kunci atau reset filter.</p>;
+  }
+  return (
+    <ul className="catalog-grid" role="list" aria-label="Daftar koleksi">
+      {books.map((item) => (
+        <li key={item.id}>
+          <button
+            className="catalog-book"
+            type="button"
+            onClick={(e) => onPick(item, e.currentTarget)}
+            aria-label={'Lihat detail ' + item.title}
+            aria-describedby={'catalog-author-' + item.id + ' catalog-meta-' + item.id}
+          >
+            <span className="catalog-cover-stage"><BookCover book={item} size="grid" /></span>
+            <span className="catalog-book-info">
+              <strong>{item.title}</strong>
+              <span className="catalog-book-author" id={'catalog-author-' + item.id}>{item.author}</span>
+              <span className="catalog-book-meta" id={'catalog-meta-' + item.id}>
+                <span>{[item.category, item.shelf && 'Rak ' + item.shelf].filter(Boolean).join(' · ')}</span>
+                <Tag tone={item.stock ? '' : 'warn'}>{item.stock ? item.stock + ' tersedia' : 'Stok habis'}</Tag>
+              </span>
+            </span>
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 export function Public({ catalog = false }) {
+  const resultsHeading = useRef(null);
+  const detailTrigger = useRef(null);
   const [params, setParams] = useSearchParams(),
     navigate = useNavigate(),
     [search, setSearch] = useState(''),
     [book, setBook] = useState(null);
+  useEffect(() => {
+    if (!book && detailTrigger.current) {
+      detailTrigger.current.focus({ preventScroll: true });
+      detailTrigger.current = null;
+    }
+  }, [book]);
+  function pickBook(item, trigger) {
+    detailTrigger.current = trigger;
+    setBook(item);
+  }
   const [version, refresh] = useState(0),
     { data, error, loading } = useData(['/catalog'], version);
   const query = params.get('q') || '';
@@ -263,7 +306,7 @@ export function Public({ catalog = false }) {
           )}
           <section aria-labelledby="koleksi-judul">
             <div className="sectionhead">
-              <h2 id="koleksi-judul">
+              <h2 id="koleksi-judul" className={catalog ? 'catalog-results-heading' : undefined} tabIndex={catalog ? -1 : undefined} ref={resultsHeading}>
                 {catalog ? 'Hasil pencarian' : 'Pilihan koleksi'}
               </h2>
               {catalog ? (
@@ -286,43 +329,20 @@ export function Public({ catalog = false }) {
                 <button onClick={() => refresh((v) => v + 1)}>Coba lagi</button>
               </>
             ) : catalog ? (
-              <div className="panel flush catalog-table">
-                <Table
-                  label="Daftar koleksi"
-                  headers={[
-                    'Judul dan penulis',
-                    'Kategori',
-                    'Rak',
-                    'Stok',
-                    'Tindakan',
-                  ]}
-                  rows={filtered.map((item) => ({
-                    id: item.id,
-                    cells: [
-                      <>
-                        <b>{item.title}</b>
-                        <small>{item.author}</small>
-                      </>,
-                      item.category || '—',
-                      item.shelf || '—',
-                      <Tag tone={item.stock ? '' : 'warn'}>
-                        {item.stock ? item.stock + ' tersedia' : 'Stok habis'}
-                      </Tag>,
-                      <button
-                        type="button"
-                        className="linkbtn"
-                        onClick={() => setBook(item)}
-                        aria-label={'Lihat detail ' + item.title}
-                      >
-                        Lihat detail <ArrowRight size={16} aria-hidden="true" />
-                      </button>,
-                    ],
-                  }))}
-                  empty="Tidak ada judul yang cocok. Ubah kata kunci atau reset filter."
-                />
-              </div>
+              <PaginatedList
+                key={JSON.stringify([query, category, available])}
+                items={filtered}
+                pageSize={6}
+                label="katalog"
+                onPageChange={() => {
+                  resultsHeading.current?.focus({ preventScroll: true });
+                  resultsHeading.current?.scrollIntoView({ block: 'start' });
+                }}
+              >
+                {(visible) => <CatalogGrid books={visible} onPick={pickBook} />}
+              </PaginatedList>
             ) : (
-              <Cards books={books.slice(0, 3)} onPick={setBook} />
+              <Cards books={books.slice(0, 3)} onPick={pickBook} />
             )}
             {!catalog && !loading && !error && !books.length && (
               <p className="empty">Koleksi belum tersedia.</p>
@@ -334,10 +354,13 @@ export function Public({ catalog = false }) {
       <PublicFooter />
       {book && (
         <Dialog title={book.title} onClose={() => setBook(null)}>
-          <p>
-            {book.author} · {book.category || 'Koleksi umum'}
-          </p>
-          <p>{book.description}</p>
+          <div className="book-cell book-detail-cover">
+            <BookCover book={book} size="detail" />
+            <div>
+              <p>{book.author} · {book.category || 'Koleksi umum'}</p>
+              <p>{book.description}</p>
+            </div>
+          </div>
           <dl className="book-details">
             <div>
               <dt>

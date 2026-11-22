@@ -393,3 +393,177 @@ test('uji penerima baru mempertahankan log lama dan menyiapkan satu pinjaman', a
   const { logs } = (await call('/reminders')).data;
   assert.equal(logs.find((log) => log.loan_id === first).state, 'Belum tahu');
 });
+
+test('kuota tiga eksemplar berlaku lintas transaksi dan tunggakan menahan sisa kuota', async () => {
+  const member = (await call('/members', 'POST', {
+    member_code: 'QUOTA', name: 'Siswa kuota', class_name: 'X', phone_owner: 'siswa', status: 'active',
+  })).data.id;
+  const book = (await call('/books', 'POST', { title: 'Buku kuota', author: 'Tim', total: 110 })).data.id;
+  const payload = { member_id: member, book_id: book, quantity: 1 };
+  const first = await call('/loans', 'POST', payload);
+  const second = await call('/loans', 'POST', payload);
+  assert.equal(first.status, 201);
+  assert.equal(second.status, 201);
+  assert.equal((await call('/loans', 'POST', { ...payload, quantity: 100 })).status, 409);
+  const old = shift(wita().slice(0, 10), -7);
+  await pool.execute('UPDATE borrowings SET due_date=? WHERE id=?', [old, first.data.id]);
+  const blocked = await call('/loans', 'POST', payload);
+  assert.match(blocked.data.message, /tunggakan/);
+  const receipt = await call('/loans/' + first.data.id + '/receive', 'POST', {});
+  assert.equal(receipt.data.state, 'Menunggu pelunasan');
+  assert.equal((await call('/loans', 'POST', payload)).status, 409);
+  await call('/loans/' + first.data.id + '/pay', 'POST', { amount: receipt.data.fine });
+  const two = await call('/loans', 'POST', payload);
+  assert.equal(two.status, 201);
+  const concurrent = await Promise.all([call('/loans', 'POST', payload), call('/loans', 'POST', payload)]);
+  assert.deepEqual(concurrent.map((r) => r.status).sort(), [201, 409]);
+  assert.equal((await call('/catalog')).data.find((b) => b.id === book).stock, 107);
+});
+
+test('libur menggeser tenggat, mengubah H-1, dan mempertahankan pesan yang sudah diproses', async () => {
+  const member = (await call('/members', 'POST', {
+    member_code: 'LIBUR', name: 'Siswa kalender', class_name: 'X', phone_owner: 'wali',
+    phone: '628123450001', consent: true, status: 'active',
+  })).data.id;
+  const book = (await call('/books', 'POST', { title: 'Kalender', author: 'Tim', total: 5 })).data.id;
+  const payload = { member_id: member, book_id: book, quantity: 1 };
+  const first = (await call('/loans', 'POST', payload)).data;
+  const next = (await call('/loans', 'POST', payload)).data;
+  const calendar = (await call('/calendar')).data;
+  const friday = calendar.due;
+  await tick(new Date(reminderDay(friday) + 'T01:00:00Z'), async () => ['Diproses', 'Uji', 'test-holiday'], true, null, first.id);
+  const saved = await call('/calendar/holidays/' + friday, 'PUT', { label: 'Libur uji' });
+  assert.equal(saved.status, 200);
+  const fresh = (await call('/calendar')).data;
+  assert.equal(fresh.due, due(calendar.today, { [friday]: 'Libur uji' }));
+  assert.ok(fresh.due > friday);
+  const loans = (await call('/loans')).data;
+  assert.equal(loans.find((l) => l.id === first.id).due_date, fresh.due);
+  assert.equal(loans.find((l) => l.id === next.id).due_date, fresh.due);
+  const sent = [];
+  const send = async (_, message) => {
+    sent.push(message);
+    return ['Diproses', 'Uji', 'test-holiday-2'];
+  };
+  const time = new Date(fresh.reminder + 'T01:00:00Z');
+  await tick(time, send, true, null, first.id);
+  await tick(time, send, true, null, next.id);
+  assert.equal(sent.length, 1);
+  assert.ok(sent[0].includes(fresh.due));
+  const moved = shift(fresh.due, 7);
+  assert.equal((await call('/calendar/holidays/' + friday, 'PUT', { new_date: moved, label: 'Libur dipindah' })).status, 200);
+  assert.deepEqual((await call('/calendar')).data.holidays, [{ date: moved, label: 'Libur dipindah' }]);
+  assert.equal((await call('/calendar/holidays/' + moved, 'DELETE')).status, 200);
+  assert.equal((await call('/calendar')).data.due, friday);
+});
+
+test('perpanjangan per transaksi mengikuti libur, pratinjau, dan pengingat', async () => {
+  const member = (await call('/members', 'POST', {
+    member_code: 'EXT', name: 'Siswa perpanjangan', class_name: 'X',
+    phone: '628123450002', phone_owner: 'wali', consent: true, status: 'active',
+  })).data.id;
+  const bookA = (await call('/books', 'POST', { title: 'Buku A perpanjangan', author: 'Tim', total: 3 })).data.id;
+  const bookB = (await call('/books', 'POST', { title: 'Buku B perpanjangan', author: 'Tim', total: 3 })).data.id;
+  const a = (await call('/loans', 'POST', { member_id: member, book_id: bookA, quantity: 1 })).data.id;
+  const b = (await call('/loans', 'POST', { member_id: member, book_id: bookB, quantity: 1 })).data.id;
+  const day = wita().slice(0, 10);
+  let monday = shift(day, 1);
+  while (new Date(monday + 'T00:00:00Z').getUTCDay() !== 1) monday = shift(monday, 1);
+  while (due(monday) !== shift(monday, 4) ||
+      due(shift(monday, 3)) !== shift(monday, 9) ||
+      ![7, 8, 9, 10].every((n) => school(shift(monday, n)))) monday = shift(monday, 7);
+  const wednesday = shift(monday, 2), thursday = shift(monday, 3);
+  const nextMonday = shift(monday, 7), nextTuesday = shift(monday, 8), nextWednesday = shift(monday, 9);
+  await pool.execute('UPDATE borrowings SET borrow_date=?,due_date=? WHERE id=?', [monday, due(monday), a]);
+  await pool.execute('UPDATE borrowings SET borrow_date=?,due_date=? WHERE id=?', [thursday, due(thursday), b]);
+  assert.equal((await call('/calendar/holidays/' + wednesday, 'PUT', { label: 'Rabu libur' })).status, 200);
+
+  const active = async (id) => (await call('/loans/active')).data.find((loan) => loan.id === id);
+  assert.equal((await active(a)).due_date, nextMonday);
+  assert.equal((await active(a)).remaining_school_days, lateDays(day, nextMonday, { [wednesday]: 'Libur' }));
+  assert.equal((await active(b)).due_date, nextWednesday);
+  const url = '/loans/' + a + '/extension';
+  const preview = (await call(url + '?days=1')).data;
+  assert.equal(preview.due_date, nextTuesday);
+  assert.equal((await call(url, 'PUT', preview)).status, 200);
+  assert.equal((await active(a)).extension_days, 1);
+  assert.equal((await active(b)).due_date, nextWednesday);
+
+  const correction = (await call(url + '?days=2')).data;
+  assert.equal((await call('/calendar/holidays/' + nextMonday, 'PUT', { label: 'Senin libur' })).status, 200);
+  assert.equal((await active(a)).due_date, nextWednesday);
+  const stale = await call(url, 'PUT', correction);
+  assert.equal(stale.status, 409);
+  assert.equal(stale.data.preview.current_due_date, nextWednesday);
+  const messages = [];
+  const send = async (_, message) => {
+    messages.push(message);
+    return ['Diproses', 'Simulasi', 'extended-a'];
+  };
+  await tick(new Date(nextMonday + 'T01:00:00Z'), send, true, null, a);
+  await tick(new Date(nextTuesday + 'T01:00:00Z'), send, true, null, a);
+  assert.equal(messages.length, 1);
+  assert.ok(messages[0].includes(nextWednesday));
+  assert.equal((await call(url, 'PUT', stale.data.preview)).status, 200);
+  assert.equal((await active(a)).extension_days, 2);
+  const cancel = (await call(url + '?days=0')).data;
+  assert.equal(cancel.due_date, nextTuesday);
+  assert.equal((await call(url, 'PUT', cancel)).status, 200);
+  assert.equal((await active(a)).extension_days, 0);
+  assert.equal((await active(a)).due_date, nextTuesday);
+  assert.equal((await call('/reminders')).data.logs.find((r) => r.loan_id === a).attempts.length, 1);
+  assert.equal((await call('/calendar/holidays/' + nextMonday, 'DELETE')).status, 200);
+  assert.equal((await call('/calendar/holidays/' + wednesday, 'DELETE')).status, 200);
+
+  await pool.execute('UPDATE borrowings SET due_date=? WHERE id=?', [day, a]);
+  const onDeadline = await call(url + '?days=1');
+  assert.equal(onDeadline.status, 200);
+  assert.ok(onDeadline.data.due_date > day);
+  await call('/loans/' + a + '/receive', 'POST', {});
+  assert.equal((await call(url, 'PUT', onDeadline.data)).status, 409);
+  assert.equal(await active(a), undefined);
+
+  const past = shift(day, -7);
+  await pool.execute('UPDATE borrowings SET borrow_date=?,due_date=? WHERE id=?', [shift(past, -10), past, b]);
+  assert.equal((await call('/loans/' + b + '/extension?days=1')).status, 409);
+  await pool.execute('UPDATE borrowings SET extension_days=7,extension_base_date=?,due_date=? WHERE id=?', [past, day, b]);
+  assert.equal((await call('/loans/' + b + '/extension?days=0')).status, 409);
+});
+
+test('Excel siswa memvalidasi baris sebelum menyimpan dan ekspor dapat diimpor ulang', async () => {
+  const { mime, columns, workbook, readWorkbook } = require('../src/utils/student-workbook');
+  async function excel(url, bytes) {
+    return fetch(base + '/api/members/' + url, {
+      method: bytes ? 'POST' : 'GET',
+      headers: { Authorization: 'Bearer ' + token, ...(bytes ? { 'Content-Type': mime } : {}) },
+      body: bytes,
+    });
+  }
+  const template = await excel('template.xlsx');
+  assert.deepEqual((await readWorkbook(Buffer.from(await template.arrayBuffer())))[0].values, columns);
+  const student = { member_code: '0007958', name: 'Siswa & Uji', class_name: 'XI', phone: '0812345678', phone_owner: 'wali', consent_at: 'valid', status: 'active' };
+  const bad = await workbook([student, student, { ...student, member_code: '0007959', name: '' }]);
+  const rejected = await (await excel('import/commit', bad)).json();
+  assert.equal(rejected.saved, false);
+  assert.deepEqual(rejected.errors.map((e) => e.row), [3, 4]);
+  const found = async () => (await call('/members')).data.find((m) => m.member_code === student.member_code);
+  assert.equal(await found(), undefined);
+  const input = await workbook([student]);
+  assert.deepEqual(await (await excel('import/preview', input)).json(), { add: 1, update: 0, errors: [], saved: false });
+  assert.equal((await (await excel('import/commit', input)).json()).saved, true);
+  const saved = await found();
+  assert.equal(saved.phone, '62812345678');
+  assert.ok(saved.consent_at);
+  const output = await fetch(base + '/api/members/export.xlsx', {
+    method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: [saved.id] }),
+  });
+  const exported = Buffer.from(await output.arrayBuffer());
+  assert.deepEqual((await readWorkbook(exported)).map((r) => r.values[0]), ['NIS', '0007958']);
+  assert.equal((await (await excel('import/preview', exported)).json()).update, 1);
+  const changed = await workbook([{ ...student, phone: '0812345679', consent_at: null }]);
+  assert.equal((await (await excel('import/commit', changed)).json()).saved, true);
+  assert.equal((await found()).phone, '62812345679');
+  assert.equal((await found()).consent_at, null);
+});
+

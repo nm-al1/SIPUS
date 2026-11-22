@@ -1,6 +1,6 @@
 const { rows, wrap, check, integer } = require('./routes/library');
 const { transaction } = require('./config/db');
-const { nextSchoolDay, reminderDay, wita } = require('./utils/calendar');
+const { nextSchoolDay, reminderDay, wita, school, loadCalendar } = require('./utils/calendar');
 
 const fs = require('node:fs');
 const path = require('node:path');
@@ -88,17 +88,19 @@ async function tick(
   const time = wita(now),
     day = time.slice(0, 10);
   if (!enabled) return;
+  const holidays = await loadCalendar();
   const candidates = await rows(
     `SELECT l.id,(SELECT MAX(a.id) FROM reminder_attempts a WHERE a.loan_id=l.id) attempt_id
     FROM borrowings l JOIN members m ON m.id=l.member_id LEFT JOIN reminders r ON r.loan_id=l.id
     WHERE l.status<>'returned' AND l.received_date IS NULL AND l.due_date<=? 
       AND m.status='active' AND m.consent_at IS NOT NULL AND m.phone<>''
       AND (? IS NULL OR l.id=?) AND ((? IS NULL AND r.id IS NULL) OR (r.id=? AND r.state='Gagal'))`,
-    [nextSchoolDay(day), onlyLoan, onlyLoan, retry, retry],
+    [nextSchoolDay(day, holidays), onlyLoan, onlyLoan, retry, retry],
   );
   let outcome;
   for (const { id, attempt_id } of candidates) {
     const job = await transaction(async (db) => {
+      const holidays = await loadCalendar(db, 'FOR SHARE');
       const [l] = await rows(
         `SELECT l.*,m.name,m.phone,m.status member_status,m.consent_at,b.title FROM borrowings l
         JOIN members m ON m.id=l.member_id JOIN books b ON b.id=l.book_id WHERE l.id=? FOR UPDATE`,
@@ -114,13 +116,14 @@ async function tick(
         l.member_status !== 'active'
       )
         return;
-      const scheduled = reminderDay(l.due_date);
+      const scheduled = reminderDay(l.due_date, holidays);
       if (
         day < scheduled ||
         (day === scheduled && time.slice(11, 16) < '09:00')
       )
         return;
       const expired = day >= l.due_date;
+      if (!expired && !school(day, holidays)) return;
       const message =
         'Perpustakaan SMK Mutiara Ilmu mengingatkan ' +
         l.name +
@@ -152,8 +155,8 @@ async function tick(
         : 'Menunggu hasil gateway.';
       if (previous)
         await rows(
-          'UPDATE reminders SET target=?,message=?,state=?,reason=?,provider_id=NULL WHERE id=?',
-          [l.phone, message, state, reason, previous.id],
+          'UPDATE reminders SET scheduled=?,target=?,message=?,state=?,reason=?,provider_id=NULL WHERE id=?',
+          [scheduled, l.phone, message, state, reason, previous.id],
           db,
         );
       else

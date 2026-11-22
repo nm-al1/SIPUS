@@ -85,8 +85,48 @@ async function seedLoan(db, userId, scenario) {
   );
 }
 
+async function seedBooks(db) {
+  const books = [
+    ['Administrasi Infrastruktur Jaringan', 'Rudi Hartono', 'TJKT', 'A-02', 8],
+    ['Praktikum Akuntansi Perusahaan', 'Sri Wahyuni', 'Akuntansi', 'B-01', 6],
+    ['Modul Projek Ilmu Pengetahuan', 'Eko Prasetyo', 'Umum', 'C-03', 10],
+    ['Pemeliharaan Kelistrikan Kendaraan', 'Sutrisno', 'Otomotif', 'D-01', 4],
+    ['Dasar Desain Komunikasi Visual', 'Tim DKV', 'DKV', 'A-03', 5],
+    ['Pemrograman Web untuk SMK', 'Tim PPLG', 'PPLG', 'A-01', 9],
+    ['Algoritma dan Logika Pemrograman', 'Tim PPLG', 'PPLG', 'A-01', 8, 'Latihan menyusun algoritma, diagram alir, percabangan, dan perulangan.'],
+    ['Basis Data Relasional', 'Tim PPLG', 'PPLG', 'A-01', 6, 'Pengantar tabel, relasi, dan kueri SQL melalui contoh inventaris sekolah.'],
+    ['Desain Antarmuka Digital', 'Tim DKV', 'DKV', 'A-03', 4, 'Panduan menyusun wireframe, hierarki visual, dan prototipe antarmuka.'],
+    ['Fotografi Produk untuk Pemula', 'Tim DKV', 'DKV', 'A-03', 0, 'Latihan komposisi, pencahayaan, dan pemotretan produk dengan alat sederhana.'],
+    ['Jaringan Komputer Dasar', 'Tim TJKT', 'TJKT', 'A-02', 9, 'Pengenalan perangkat jaringan, topologi, dan pengalamatan IP.'],
+    ['Keamanan Siber untuk Pelajar', 'Tim TJKT', 'TJKT', 'A-02', 5, 'Materi perlindungan akun, kata sandi, dan pengenalan phishing.'],
+    ['Komunikasi Bisnis', 'Tim Akuntansi', 'Akuntansi', 'B-01', 7, 'Contoh surat, laporan singkat, dan presentasi dalam kegiatan bisnis.'],
+    ['Laporan Keuangan Usaha Kecil', 'Tim Akuntansi', 'Akuntansi', 'B-01', 1, 'Studi kasus pencatatan transaksi dan penyusunan laporan usaha kecil.'],
+    ['Matematika Terapan untuk SMK', 'Tim Matematika', 'Umum', 'C-03', 12, 'Soal terapan tentang pengukuran, persentase, dan pembacaan grafik.'],
+    ['Penulisan Laporan Praktik Kerja', 'Tim Bahasa', 'Umum', 'C-03', 3, 'Panduan menyusun laporan praktik kerja dari catatan lapangan hingga lampiran.'],
+    ['Pengenalan Motor Bensin', 'Tim Otomotif', 'Otomotif', 'D-01', 5, 'Pengenalan komponen, siklus kerja, dan perawatan dasar motor bensin.'],
+    ['Perawatan Berkala Sepeda Motor', 'Tim Otomotif', 'Otomotif', 'D-01', 0, 'Daftar pemeriksaan berkala untuk oli, rem, ban, dan sistem penggerak.'],
+    ['Projek Kewirausahaan Siswa', 'Tim Kewirausahaan', 'Umum', 'C-03', 6, 'Latihan menyiapkan ide usaha, anggaran, dan presentasi produk siswa.'],
+    ['Tipografi dan Tata Letak', 'Tim DKV', 'DKV', 'A-03', 2, 'Contoh penggunaan jenis huruf, grid, dan hierarki untuk media cetak.'],
+  ];
+  for (const [i, [title, author, category, shelf, stock, description = null]] of books.entries()) {
+    await db.execute(
+      'INSERT INTO categories(name) VALUES(?) ON DUPLICATE KEY UPDATE id=id',
+      [category],
+    );
+    await db.execute(
+      'INSERT INTO books(isbn,title,author,category_id,shelf,stock,description) SELECT ?,?,?,id,?,?,? FROM categories WHERE name=? ON DUPLICATE KEY UPDATE books.id=books.id',
+      ['DEMO-' + (i + 1), title, author, shelf, stock, description, category],
+    );
+  }
+}
+
 async function demo() {
   await setup();
+  if (process.argv.includes('--buku')) {
+    await transaction(seedBooks);
+    console.log('Koleksi contoh siap.');
+    return;
+  }
   const credentials = path.join(__dirname, '../.env.demo.local');
   let password;
   if (fs.existsSync(credentials))
@@ -117,30 +157,7 @@ async function demo() {
           ['Petugas Demo', email, await bcrypt.hash(password, 10), 'petugas'],
         )
       )[0].insertId;
-    const books = [
-      [
-        'Administrasi Infrastruktur Jaringan',
-        'Rudi Hartono',
-        'TJKT',
-        'A-02',
-        8,
-      ],
-      ['Praktikum Akuntansi Perusahaan', 'Sri Wahyuni', 'Akuntansi', 'B-01', 6],
-      ['Modul Projek Ilmu Pengetahuan', 'Eko Prasetyo', 'Umum', 'C-03', 10],
-      ['Pemeliharaan Kelistrikan Kendaraan', 'Sutrisno', 'Otomotif', 'D-01', 4],
-      ['Dasar Desain Komunikasi Visual', 'Tim DKV', 'DKV', 'A-03', 5],
-      ['Pemrograman Web untuk SMK', 'Tim PPLG', 'PPLG', 'A-01', 9],
-    ];
-    for (const [i, [title, author, cat, shelf, stock]] of books.entries()) {
-      await db.execute(
-        'INSERT INTO categories(name) VALUES(?) ON DUPLICATE KEY UPDATE id=id',
-        [cat],
-      );
-      await db.execute(
-        'INSERT INTO books(isbn,title,author,category_id,shelf,stock) SELECT ?,?,?,id,?,? FROM categories WHERE name=? ON DUPLICATE KEY UPDATE books.id=books.id',
-        ['DEMO-' + (i + 1), title, author, shelf, stock, cat],
-      );
-    }
+    await seedBooks(db);
     for (const [code, name, cl, status = 'active'] of [
       ['240101', 'Nadia Putri Maharani', 'XI TJKT 1'],
       ['240102', 'Ari Nugraha', 'XI PPLG 1'],

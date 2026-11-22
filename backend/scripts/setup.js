@@ -19,6 +19,7 @@ async function setup() {
       .map((s) => s.trim())
       .filter((s) => /^CREATE TABLE/i.test(s)))
       await db.query(sql);
+    await db.query("INSERT IGNORE INTO school_calendar(id,holidays) VALUES(1,'{}')");
     const [cascades] = await db.execute(
       "SELECT k.CONSTRAINT_NAME name,k.COLUMN_NAME col,k.REFERENCED_TABLE_NAME target,k.REFERENCED_COLUMN_NAME target_col FROM information_schema.KEY_COLUMN_USAGE k JOIN information_schema.REFERENTIAL_CONSTRAINTS r ON r.CONSTRAINT_SCHEMA=k.CONSTRAINT_SCHEMA AND r.CONSTRAINT_NAME=k.CONSTRAINT_NAME AND r.TABLE_NAME=k.TABLE_NAME WHERE k.CONSTRAINT_SCHEMA=DATABASE() AND k.TABLE_NAME='borrowings' AND r.DELETE_RULE='CASCADE'",
     );
@@ -40,6 +41,8 @@ async function setup() {
         consent_at: 'DATETIME NULL',
       },
       borrowings: {
+        extension_days: 'SMALLINT UNSIGNED NOT NULL DEFAULT 0',
+        extension_base_date: 'DATE NULL',
         quantity: 'INT NOT NULL DEFAULT 1',
         received_date: 'DATE NULL',
         received_by: 'INT NULL',
