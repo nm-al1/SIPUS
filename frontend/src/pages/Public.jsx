@@ -11,7 +11,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  BookOpen,
   Eye,
   EyeOff,
   LogIn,
@@ -134,34 +133,12 @@ function PublicFooter() {
     </footer>
   );
 }
-function Cards({ books, onPick }) {
-  return (
-    <div className="cards">
-      {books.map((b) => (
-        <button className="bookcard" key={b.id} onClick={(e) => onPick(b, e.currentTarget)}>
-          <span className="bookmeta">
-            <BookOpen size={17} aria-hidden="true" />
-            {b.shelf ? 'Rak ' + b.shelf : b.category || 'Koleksi umum'}
-          </span>
-          <strong>{b.title}</strong>
-          <span>{b.author}</span>
-          <span className="bookcard-footer">
-            <Tag tone={b.stock ? '' : 'warn'}>
-              {b.stock ? b.stock + ' tersedia' : 'Stok habis'}
-            </Tag>
-            <ArrowRight size={17} aria-hidden="true" />
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-function CatalogGrid({ books, onPick }) {
+function CatalogGrid({ books, onPick, compact = false, empty = 'Tidak ada judul yang cocok. Ubah kata kunci atau reset filter.' }) {
   if (!books.length) {
-    return <p className="empty">Tidak ada judul yang cocok. Ubah kata kunci atau reset filter.</p>;
+    return <p className="empty" role="status">{empty}</p>;
   }
   return (
-    <ul className="catalog-grid" role="list" aria-label="Daftar koleksi">
+    <ul className={'catalog-grid' + (compact ? ' catalog-grid-compact' : '')} role="list" aria-label="Daftar koleksi">
       {books.map((item) => (
         <li key={item.id}>
           <button
@@ -190,7 +167,6 @@ export function Public({ catalog = false }) {
   const resultsHeading = useRef(null);
   const detailTrigger = useRef(null);
   const [params, setParams] = useSearchParams(),
-    navigate = useNavigate(),
     [search, setSearch] = useState(''),
     [book, setBook] = useState(null);
   useEffect(() => {
@@ -205,9 +181,9 @@ export function Public({ catalog = false }) {
   }
   const [version, refresh] = useState(0),
     { data, error, loading } = useData(['/catalog'], version);
-  const query = params.get('q') || '';
-  const category = params.get('kategori') || '';
-  const available = params.get('tersedia') === '1';
+  const query = catalog ? params.get('q') || '' : search.trim();
+  const category = catalog ? params.get('kategori') || '' : '';
+  const available = catalog && params.get('tersedia') === '1';
   const filtering = Boolean(query || category || available);
   const books = data?.[0] || [],
     filtered = books.filter(
@@ -216,6 +192,10 @@ export function Public({ catalog = false }) {
         (!category || b.category === category) &&
         (!available || b.stock > 0),
     );
+  const highlights = catalog || query
+    ? filtered
+    : [...filtered].sort((a, b) => Number(b.stock > 0) - Number(a.stock > 0));
+  const catalogLink = query ? '/katalog?' + new URLSearchParams({ q: query }) : '/katalog';
   function filterBy(key, value) {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value);
@@ -228,34 +208,7 @@ export function Public({ catalog = false }) {
       <main>
         {!catalog && <LandingHero />}
         <div className={catalog ? 'publicmain' : 'publicmain landing-content'}>
-          {!catalog ? (
-            <>
-              <form
-                className="panel landing-search"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  navigate({
-                    pathname: '/katalog',
-                    search: search.trim()
-                      ? '?' + new URLSearchParams({ q: search.trim() })
-                      : '',
-                  });
-                }}
-              >
-                <h2>Cari koleksi perpustakaan</h2>
-                <div className="toolbar">
-                  <SearchBox
-                    value={search}
-                    onChange={setSearch}
-                    placeholder="Judul, penulis, atau kode rak"
-                  />
-                  <button>
-                    Cari buku <ArrowRight size={16} aria-hidden="true" />
-                  </button>
-                </div>
-              </form>
-            </>
-          ) : (
+          {catalog && (
             <>
               <div className="catalog-heading page-enter">
                 <Link to="/">
@@ -305,9 +258,9 @@ export function Public({ catalog = false }) {
             </>
           )}
           <section aria-labelledby="koleksi-judul">
-            <div className="sectionhead">
+            <div className={'sectionhead' + (catalog ? '' : ' landing-collection-heading')}>
               <h2 id="koleksi-judul" className={catalog ? 'catalog-results-heading' : undefined} tabIndex={catalog ? -1 : undefined} ref={resultsHeading}>
-                {catalog ? 'Hasil pencarian' : 'Pilihan koleksi'}
+                {catalog ? 'Hasil pencarian' : 'Cari buku'}
               </h2>
               {catalog ? (
                 <small aria-live="polite">
@@ -316,11 +269,16 @@ export function Public({ catalog = false }) {
                     : filtered.length + ' dari ' + books.length + ' judul'}
                 </small>
               ) : (
-                <Link to="/katalog" className="collection-link">
-                  Semua koleksi <ArrowRight size={17} aria-hidden="true" />
+                <Link to={catalogLink} className="collection-link">
+                  {query ? 'Lihat di katalog' : 'Semua koleksi'} <ArrowRight size={17} aria-hidden="true" />
                 </Link>
               )}
             </div>
+            {!catalog && (
+              <div className="landing-collection-search">
+                <SearchBox value={search} onChange={setSearch} placeholder="Cari judul, penulis, ISBN, atau rak" />
+              </div>
+            )}
             {loading ? (
               <p>Memuat koleksi…</p>
             ) : error ? (
@@ -342,10 +300,17 @@ export function Public({ catalog = false }) {
                 {(visible) => <CatalogGrid books={visible} onPick={pickBook} />}
               </PaginatedList>
             ) : (
-              <Cards books={books.slice(0, 3)} onPick={pickBook} />
-            )}
-            {!catalog && !loading && !error && !books.length && (
-              <p className="empty">Koleksi belum tersedia.</p>
+              <>
+                {query && filtered.length > 0 && (
+                  <p className="landing-results-count" role="status">
+                    {filtered.length > 3
+                      ? 'Menampilkan 3 dari ' + filtered.length + ' judul yang cocok.'
+                      : filtered.length + ' judul yang cocok.'}
+                  </p>
+                )}
+                <CatalogGrid compact books={highlights.slice(0, 3)} onPick={pickBook}
+                  empty={query ? 'Tidak ada judul yang cocok. Coba kata kunci lain.' : 'Koleksi belum tersedia.'} />
+              </>
             )}
           </section>
           {!catalog && <BorrowingGuide />}
