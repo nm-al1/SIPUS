@@ -10,6 +10,8 @@ Jika menjalankan server secara manual setelah pembaruan, jalankan `npm.cmd ci` d
 
 Simpan sampul di `frontend/src/assets/sampul-buku` dengan nama sesuai ISBN atau kode koleksi, misalnya `DEMO-1.jpg`. Aplikasi mencocokkan nama tanpa spasi, tanda hubung, atau perbedaan huruf kapital. Bangun ulang frontend untuk memuat sampul baru.
 
+Di **Buku dan Stok**, petugas bisa mengunggah sampul JPG, PNG, atau WebP dari form buku, mengimpor data dari template Excel, dan mengunggah ZIP sampul yang dinamai berdasarkan kode koleksi. SIPUS menyimpan unggahan di `backend/uploads/sampul-buku`. Saat memindahkan instalasi, salin folder unggahan bersama database.
+
 ---
 
 ## 🛠️ Tech Stack

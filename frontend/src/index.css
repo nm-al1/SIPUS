@@ -219,6 +219,7 @@ aside {
   border-bottom: 1px solid #c9dbd4;
 }
 .hero-photos,
+.hero-photo,
 .hero-photos img,
 .hero::after {
   position: absolute;
@@ -226,10 +227,32 @@ aside {
   width: 100%;
   height: 100%;
 }
+.hero-photo {
+  overflow: hidden;
+  visibility: hidden;
+}
 .hero-photos img {
   object-fit: cover;
-  object-position: center 45%;
-  visibility: hidden;
+  object-position: var(--hero-photo-position, 50% 45%);
+}
+.hero-photo-students { --hero-photo-position: 93% 50%; }
+.hero-photo-library::before {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  background: var(--hero-photo-backdrop) center / cover;
+  filter: blur(24px) brightness(.75);
+}
+.hero-photo-library img {
+  object-fit: contain;
+  object-position: 91% center;
+}
+.hero-photo-school { --hero-photo-position: 68% 40%; }
+@media (min-width: 741px) {
+  .hero-photo-students img { height: 108%; }
+}
+@media (max-width: 740px) {
+  .hero-photo-library img { object-position: center; }
 }
 .hero-photos .is-current,
 .hero-photos .is-previous {
@@ -261,10 +284,10 @@ aside {
 .hero-inner {
   position: relative;
   z-index: 3;
-  min-height: 478px;
+  min-height: clamp(410px, 33vw, 520px);
   display: flex;
   align-items: center;
-  padding: 56px 34px 88px;
+  padding: 56px 34px;
 }
 .hero h1 {
   max-width: 720px;
@@ -298,34 +321,6 @@ aside {
 }
 .hero-actions .hero-secondary:hover {
   background: #204246;
-}
-.hero-controls {
-  display: flex;
-  align-items: center;
-  position: absolute;
-  bottom: 20px;
-  right: 34px;
-  padding: 2px;
-  border: 1px solid #ffffff59;
-  border-radius: 8px;
-  background: #102a2de6;
-}
-.hero-controls button {
-  width: 44px;
-  padding: 0;
-  background: transparent;
-}
-.hero-controls button:hover {
-  background: #ffffff29;
-}
-.hero-dot span {
-  width: 8px;
-  height: 8px;
-  border: 1px solid #fff;
-  border-radius: 50%;
-}
-.hero-dot[aria-pressed='true'] span {
-  background: #fff;
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-photos .is-entering {
@@ -917,16 +912,6 @@ td small {
   justify-content: flex-end;
   margin: 20px 0 0;
 }
-.check {
-  display: block;
-  margin: 12px 0;
-}
-.consent-check {
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #f2f7f5;
-}
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.85fr);
@@ -1225,12 +1210,8 @@ dialog[open] {
     grid-template-columns: 1fr;
   }
   .hero-inner {
-    min-height: 380px;
-    padding: 44px 18px 94px;
-  }
-  .hero-controls {
-    left: 18px;
-    right: auto;
+    min-height: clamp(380px, 100vw, 440px);
+    padding: 44px 18px;
   }
   .hero::after {
     background: linear-gradient(90deg, #0a2023f2, #0a2023be);
@@ -1282,8 +1263,11 @@ dialog[open] {
     padding-inline: 8px;
   }
 }
-.book-picker { position: relative; min-width: 0; }
-.book-picker-popup {
+.search-picker { position: relative; min-width: 0; }
+.search-picker .search { position: relative; }
+.search-picker input { padding-right: 34px; }
+.search-picker-chevron { position: absolute; right: 10px; pointer-events: none; }
+.search-picker-popup {
   position: absolute;
   z-index: 4;
   inset: 100% 0 auto;
@@ -1292,17 +1276,17 @@ dialog[open] {
   border-radius: 8px;
   box-shadow: 0 6px 16px #15364022;
 }
-.book-picker-popup ul {
+.search-picker-popup ul {
   list-style: none;
   padding: 0;
   margin: 0;
   max-height: 16rem;
   overflow: auto;
 }
-.book-picker-popup li { padding: 9px 12px; cursor: pointer; overflow-wrap: anywhere; }
-.book-picker-popup small { display: block; }
-.book-picker-popup li:is(:hover, [aria-selected="true"]) { background: #e6f3ef; }
-.book-picker-popup p { margin: 10px 12px; }
+.search-picker-popup li { padding: 9px 12px; cursor: pointer; overflow-wrap: anywhere; }
+.search-picker-popup small { display: block; }
+.search-picker-popup li:is(:hover, [aria-selected="true"]) { background: #e6f3ef; }
+.search-picker-popup p { margin: 10px 12px; }
 .pagination, .pagination-controls, .pagination-numbers, .inline-actions {
   display: flex;
   align-items: center;
@@ -1329,8 +1313,20 @@ dialog[open] {
   .pagination-direction span { display: none; }
 }
 .excel-actions { margin: 0 0 12px; }
+.class-directory { margin-bottom: 18px; }
+.class-directory:focus-within { position: relative; z-index: 2; }
+.class-directory .search-picker { max-width: 420px; }
+.class-directory-heading { flex-wrap: wrap; }
 .book-cell { display: flex; align-items: center; gap: 10px; }
 .book-detail-cover { align-items: flex-start; overflow-wrap: anywhere; }
+.book-cover-field { display: flex; align-items: flex-start; gap: 14px; margin-top: 18px; }
+.book-cover-field > div { min-width: 0; flex: 1; }
+.book-cover-field small { display: block; margin-top: 5px; color: var(--muted); }
+.book-cover-field .linkbtn { padding-inline: 0; }
+@media (max-width: 460px) {
+  .book-cover-field { flex-direction: column; }
+  .book-cover-field > div { width: 100%; }
+}
 .book-cover {
   display: inline-grid;
   width: 30px;

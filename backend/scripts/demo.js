@@ -120,11 +120,51 @@ async function seedBooks(db) {
   }
 }
 
+async function seedStudentsByClass(db) {
+  const [classes] = await db.query('SELECT id FROM classes ORDER BY id FOR UPDATE');
+  if (!classes.length) throw Error('Tambahkan kelas sebelum mengisi siswa demo.');
+
+  const [counts] = await db.query('SELECT class_id,COUNT(*) total FROM members GROUP BY class_id');
+  const countByClass = new Map(counts.map((entry) => [entry.class_id, Number(entry.total)]));
+  const [existing] = await db.query("SELECT member_code FROM members WHERE member_code LIKE '99090%'");
+  const usedCodes = new Set(existing.map((member) => member.member_code));
+  const givenNames = [
+    'Aditya', 'Alia', 'Arif', 'Ayu', 'Bagus', 'Bela', 'Citra', 'Dimas', 'Dini', 'Farhan',
+    'Fira', 'Hanif', 'Intan', 'Jihan', 'Kirana', 'Laras', 'Nabil', 'Nanda', 'Rani', 'Rizky',
+  ];
+  const familyNames = [
+    'Ananta', 'Aulia', 'Hidayat', 'Maulana', 'Nuraini', 'Pratama', 'Putri', 'Saputra', 'Wahyuni', 'Wijaya',
+  ];
+  let inserted = 0;
+  for (const { id } of classes) {
+    const missing = 20 - (countByClass.get(id) || 0);
+    if (missing <= 0) continue;
+    const additions = [];
+    let serial = 0;
+    while (additions.length < missing) {
+      serial++;
+      const code = '99090' + String(id).padStart(10, '0') + String(serial).padStart(3, '0');
+      if (usedCodes.has(code)) continue;
+      const given = givenNames[(serial - 1) % givenNames.length];
+      const family = familyNames[(id + serial) % familyNames.length];
+      additions.push([code, given + ' ' + family + ' (Demo)', id]);
+    }
+    await db.query('INSERT INTO members(member_code,name,class_id) VALUES ?', [additions]);
+    inserted += additions.length;
+  }
+  return inserted;
+}
+
 async function demo() {
   await setup();
   if (process.argv.includes('--buku')) {
     await transaction(seedBooks);
     console.log('Koleksi contoh siap.');
+    return;
+  }
+  if (process.argv.includes('--siswa-per-kelas')) {
+    const inserted = await transaction(seedStudentsByClass);
+    console.log(inserted + ' siswa demo ditambahkan.');
     return;
   }
   const credentials = path.join(__dirname, '../.env.demo.local');
@@ -170,9 +210,13 @@ async function demo() {
       ['240109', 'Dimas Saputra', 'XII TKR 1'],
       ['240110', 'Salsa Nuraini', 'X DKV 2'],
     ]) {
+      const [schoolClass] = await db.execute(
+        'INSERT INTO classes(name) VALUES(?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)',
+        [cl],
+      );
       await db.execute(
-        'INSERT INTO members(member_code,name,class_name,status) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE id=id',
-        [code, name, cl, status],
+        'INSERT INTO members(member_code,name,class_id,status) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE id=id',
+        [code, name, schoolClass.insertId, status],
       );
     }
     const today = wita().slice(0, 10);

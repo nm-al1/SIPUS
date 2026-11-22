@@ -2,6 +2,38 @@ const fs = require('node:fs');
 const path = require('node:path');
 const mysql = require('mysql2/promise');
 const { config } = require('../src/config/db');
+const { normalizeClassName } = require('../src/utils/class-name');
+
+async function migrateClasses(db) {
+  const [keys] = await db.query(
+    "SELECT 1 FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='members' AND COLUMN_NAME='class_id' AND REFERENCED_TABLE_NAME='classes'",
+  );
+  if (!keys.length) {
+    await db.query('ALTER TABLE members ADD CONSTRAINT members_class_fk FOREIGN KEY (class_id) REFERENCES classes(id)');
+  }
+  await db.beginTransaction();
+  try {
+    const [members] = await db.query('SELECT id,class_name FROM members WHERE class_id IS NULL ORDER BY id');
+    const classes = new Map();
+    for (const member of members) {
+      const name = normalizeClassName(member.class_name);
+      if (!name) continue;
+      if (!classes.has(name)) {
+        const [result] = await db.execute(
+          'INSERT INTO classes(name) VALUES(?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)',
+          [name],
+        );
+        classes.set(name, result.insertId);
+      }
+      await db.execute('UPDATE members SET class_id=? WHERE id=? AND class_id IS NULL', [classes.get(name), member.id]);
+    }
+    await db.commit();
+  } catch (error) {
+    await db.rollback();
+    throw error;
+  }
+}
+
 async function setup() {
   const db = await mysql.createConnection({ ...config, database: undefined });
   try {
@@ -37,6 +69,7 @@ async function setup() {
       },
       members: {
         class_name: "VARCHAR(60) DEFAULT ''",
+        class_id: 'INT NULL',
         phone_owner: "VARCHAR(20) DEFAULT 'siswa'",
         consent_at: 'DATETIME NULL',
       },
@@ -60,6 +93,7 @@ async function setup() {
           ]);
       }
     }
+    await migrateClasses(db);
     await db.query(
       'CREATE TABLE IF NOT EXISTS sessions (token_hash CHAR(64) PRIMARY KEY,user_id INT NOT NULL, expires_at DATETIME NOT NULL, FOREIGN KEY(user_id) REFERENCES users(id))',
     );

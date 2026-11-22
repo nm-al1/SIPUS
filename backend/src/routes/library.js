@@ -1,7 +1,12 @@
 const express = require('express');
 const crypto = require('node:crypto');
 const bcrypt = require('bcryptjs');
-const { mime, columns, workbook, readWorkbook } = require('../utils/student-workbook');
+const path = require('node:path');
+const fs = require('node:fs/promises');
+const { mime, columns, workbook, writeWorkbook, readWorkbook } = require('../utils/student-workbook');
+const readZip = require('../utils/zip-reader');
+const { validateCover, withCoverUploads } = require('../utils/book-covers');
+const { normalizeClassName, classKey } = require('../utils/class-name');
 const { pool, transaction } = require('../config/db');
 const {
   due,
@@ -42,13 +47,14 @@ async function rows(sql, params = [], db = pool) {
 const digest = (token) =>
   crypto.createHash('sha256').update(token).digest('hex');
 const today = () => wita().slice(0, 10);
-const inventory = `SELECT b.id,b.isbn,b.title,b.author,b.publisher,b.year_published,b.description,b.shelf,b.stock,b.lost,b.archived,
+const inventory = `SELECT b.id,b.isbn,b.title,b.author,b.publisher,b.year_published,b.description,b.shelf,b.stock,b.lost,b.archived,b.cover_image,
   c.name category, COALESCE(l.borrowed,0) borrowed,b.stock+b.lost+COALESCE(l.borrowed,0) total
   FROM books b LEFT JOIN categories c ON c.id=b.category_id LEFT JOIN
   (SELECT book_id,SUM(quantity) borrowed FROM borrowings WHERE status<>'returned' GROUP BY book_id) l ON l.book_id=b.id`;
-const loans = `SELECT l.*,m.name member_name,m.member_code,m.class_name,b.title,u.name operator,
+const loans = `SELECT l.*,m.name member_name,m.member_code,m.class_id,COALESCE(c.name,'') class_name,b.title,u.name operator,
   receiver.name received_by_name,payer.name paid_by_name FROM borrowings l
   JOIN members m ON m.id=l.member_id JOIN books b ON b.id=l.book_id JOIN users u ON u.id=l.user_id
+  LEFT JOIN classes c ON c.id=m.class_id
   LEFT JOIN users receiver ON receiver.id=l.received_by
   LEFT JOIN users payer ON payer.id=l.paid_by`;
 function summary(l, day, holidays) {
@@ -127,75 +133,88 @@ router.get(
     res.json(await rows(inventory + ' ORDER BY b.archived,b.title')),
   ),
 );
-async function saveBook(req, res) {
-  const b = req.body;
-  const total = integer(b.total),
-    lost = integer(b.lost ?? 0);
-  const title = str(b.title, 255, 'Judul'),
-    author = str(b.author, 100, 'Penulis');
-  const category = str(b.category, 100, 'Kategori', false);
-  const id = await transaction(async (db) => {
-    let borrowed = 0,
-      categoryId = null;
-    if (req.params.id) {
-      const [book] = await rows(
-        'SELECT id FROM books WHERE id=? FOR UPDATE',
-        [integer(req.params.id, 1)],
-        db,
-      );
-      check(book, 'Buku tidak ditemukan.', 404);
-      const [n] = await rows(
-        "SELECT COALESCE(SUM(quantity),0) n FROM borrowings WHERE book_id=? AND status<>'returned'",
-        [book.id],
-        db,
-      );
-      borrowed = Number(n.n);
-    }
-    check(
-      total >= lost + borrowed,
-      'Stok total kurang dari jumlah dipinjam dan hilang.',
-      409,
-    );
-    if (category) {
-      await rows(
-        'INSERT INTO categories(name) VALUES(?) ON DUPLICATE KEY UPDATE name=VALUES(name)',
-        [category],
-        db,
-      );
-      categoryId = (
-        await rows('SELECT id FROM categories WHERE name=?', [category], db)
-      )[0].id;
-    }
-    const values = [
-      title,
-      author,
-      str(b.isbn, 50, 'ISBN', false) || null,
-      categoryId,
-      str(b.shelf, 60, 'Rak', false),
-      total - borrowed - lost,
-      lost,
-      str(b.description, 4000, 'Deskripsi', false),
-    ];
-    if (req.params.id) {
-      await rows(
-        'UPDATE books SET title=?,author=?,isbn=?,category_id=?,shelf=?,stock=?,lost=?,description=? WHERE id=?',
-        [...values, req.params.id],
-        db,
-      );
-      return Number(req.params.id);
-    }
-    return (
-      await rows(
-        'INSERT INTO books(title,author,isbn,category_id,shelf,stock,lost,description) VALUES(?,?,?,?,?,?,?,?)',
-        values,
-        db,
-      )
-    ).insertId;
-  });
-  res.json({ id });
+function bookInput(b, isbnRequired = false) {
+  check(b && typeof b === 'object', 'Data buku tidak valid.');
+  return {
+    title: str(b.title, 255, 'Judul'),
+    author: str(b.author, 100, 'Penulis'),
+    isbn: str(b.isbn, 50, 'ISBN / kode koleksi', isbnRequired) || null,
+    category: str(b.category, 100, 'Kategori', false),
+    shelf: str(b.shelf, 60, 'Rak', false),
+    total: integer(b.total),
+    lost: integer(b.lost ?? 0),
+    description: str(b.description, 4000, 'Deskripsi', false),
+  };
 }
-router.post('/books', wrap(saveBook));
-router.put('/books/:id', wrap(saveBook));
+function availableStock(book, borrowed) {
+  check(book.total >= book.lost + borrowed, 'Stok total kurang dari jumlah dipinjam dan hilang.', 409);
+  return book.total - book.lost - borrowed;
+}
+async function borrowedCopies(id, db) {
+  if (!id) return 0;
+  const [result] = await rows(
+    "SELECT COALESCE(SUM(quantity),0) n FROM borrowings WHERE book_id=? AND status<>'returned'",
+    [id], db,
+  );
+  return Number(result.n);
+}
+async function persistBook(book, stock, id, db, cover = null) {
+  let categoryId = null;
+  if (book.category) {
+    const category = await rows(
+      'INSERT INTO categories(name) VALUES(?) ON DUPLICATE KEY UPDATE id=LAST_INSERT_ID(id)',
+      [book.category], db,
+    );
+    categoryId = category.insertId;
+  }
+  const values = [book.title, book.author, book.isbn, categoryId, book.shelf, stock, book.lost, book.description, cover];
+  if (id) {
+    await rows(
+      'UPDATE books SET title=?,author=?,isbn=?,category_id=?,shelf=?,stock=?,lost=?,description=?,cover_image=COALESCE(?,cover_image) WHERE id=?',
+      [...values, id], db,
+    );
+    return id;
+  }
+  const result = await rows(
+    'INSERT INTO books(title,author,isbn,category_id,shelf,stock,lost,description,cover_image) VALUES(?,?,?,?,?,?,?,?,?)',
+    values, db,
+  );
+  return result.insertId;
+}
+const bookUpload = express.raw({ type: 'multipart/form-data', limit: '6mb', inflate: false });
+async function bookForm(req) {
+  if (!Buffer.isBuffer(req.body)) return { data: req.body };
+  try {
+    const form = await new Request('http://localhost', {
+      method: 'POST', headers: { 'Content-Type': req.headers['content-type'] }, body: req.body,
+    }).formData();
+    const image = form.get('cover');
+    return {
+      data: JSON.parse(form.get('data')),
+      file: image ? Buffer.from(await image.arrayBuffer()) : null,
+    };
+  } catch {
+    check(false, 'Form buku atau sampul tidak valid.');
+  }
+}
+async function saveBook(req, res) {
+  const { data, file } = await bookForm(req);
+  const book = bookInput(data);
+  const extension = file ? validateCover(file) : null;
+  const id = req.params.id ? integer(req.params.id, 1) : null;
+  const saved = await withCoverUploads((store) => transaction(async (db) => {
+    if (id) {
+      const [existing] = await rows('SELECT id FROM books WHERE id=? FOR UPDATE', [id], db);
+      check(existing, 'Buku tidak ditemukan.', 404);
+    }
+    const stock = availableStock(book, await borrowedCopies(id, db));
+    const cover = file ? await store(file, extension) : null;
+    return persistBook(book, stock, id, db, cover);
+  }));
+  res.json({ id: saved });
+}
+router.post('/books', bookUpload, wrap(saveBook));
+router.put('/books/:id', bookUpload, wrap(saveBook));
 router.delete(
   '/books/:id',
   wrap(async (req, res) => {
@@ -206,43 +225,247 @@ router.delete(
     res.json({ ok: true });
   }),
 );
+const bookColumns = ['Judul Buku', 'Penulis', 'ISBN / Kode Koleksi', 'Kategori', 'Lokasi Rak', 'Stok Total', 'Eksemplar Hilang', 'Deskripsi'];
+const bookRowFields = ['title', 'author', 'isbn', 'category', 'shelf', 'total', 'lost', 'description'];
+const bookCode = (value) => value.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
+const bookSheet = (books) => writeWorkbook([{
+  name: 'Buku',
+  rows: [bookColumns, ...books.map((book) => bookRowFields.map((field) => book[field]))],
+}], [3]);
+
+async function sendBookSheet(res, filename, books) {
+  res.type(mime).attachment(filename).send(await bookSheet(books));
+}
+router.get('/books/template.xlsx', wrap((req, res) =>
+  sendBookSheet(res, 'Template-Buku-SIPUS.xlsx', [])));
+router.post('/books/export.xlsx', wrap(async (req, res) => {
+  check(Array.isArray(req.body.ids), 'Daftar buku tidak valid.');
+  const ids = new Set(req.body.ids.map((id) => integer(id, 1)));
+  const books = await rows(inventory + ' ORDER BY b.title,b.id');
+  await sendBookSheet(res, 'Data-Buku-SIPUS.xlsx', books.filter((book) => ids.has(book.id)));
+}));
+
+async function findBooks(entries, db, commit) {
+  const matched = new Map();
+  const codes = [...new Set(entries.map((entry) => entry.isbn))].sort();
+  for (const isbn of codes) {
+    const [book] = await rows(
+      'SELECT id,title,cover_image FROM books WHERE isbn=?' + (commit ? ' FOR UPDATE' : ''),
+      [isbn], db,
+    );
+    matched.set(isbn, book);
+  }
+  return matched;
+}
+function bookPreview(req, entries, errors, version) {
+  return {
+    entries,
+    errors,
+    added: entries.filter((entry) => entry.action === 'Tambah buku' || entry.action === 'Pasang sampul').length,
+    updated: entries.filter((entry) => entry.action === 'Perbarui buku' || entry.action === 'Ganti sampul').length,
+    fingerprint: crypto.createHash('sha256').update(req.body).update(JSON.stringify(version)).digest('hex'),
+    saved: false,
+  };
+}
+function canApplyBookBatch(req, preview) {
+  return req.params.action === 'commit' && !preview.errors.length &&
+    req.get('X-Sipus-Preview') === preview.fingerprint;
+}
+function sendBookPreview(req, res, preview) {
+  if (req.params.action === 'commit' && !preview.errors.length && !preview.saved) {
+    return res.status(409).json({
+      message: 'Data buku berubah sejak pratinjau. Periksa hasil terbaru sebelum menyimpan.',
+      preview,
+    });
+  }
+  res.json(preview);
+}
+
+async function importBooks(req, res) {
+  check(Buffer.isBuffer(req.body) && req.body.length, 'Pilih file Excel .xlsx.');
+  const limitMessage = 'Maksimal 5.000 buku dalam satu impor.';
+  let sheets;
+  try {
+    sheets = await readWorkbook(req.body, { maxColumns: 8, rowLimitMessage: limitMessage });
+  } catch (error) {
+    check(false, error.message === limitMessage ? limitMessage : 'File Excel tidak dapat dibaca. Gunakan template buku SIPUS.');
+  }
+  const errors = [], input = [], seen = new Set();
+  let rowCount = 0;
+  for (const { name, rows: [header, ...data] } of sheets) {
+    if (!header) continue;
+    check(header.number === 1 && !header.hasFormula && header.values.length === bookColumns.length &&
+      bookColumns.every((label, i) => header.values[i].trim().toLowerCase() === label.toLowerCase()),
+    'Kolom pada sheet "' + name + '" tidak sesuai dengan template buku SIPUS.');
+    for (const row of data) {
+      rowCount++;
+      const location = name + ' · baris ' + row.number;
+      try {
+        check(!row.hasFormula, 'Masukkan nilai langsung tanpa rumus atau sel error.');
+        const fields = Object.fromEntries(bookRowFields.map((field, i) => [field, row.values[i]?.trim() || '']));
+        const book = bookInput({ ...fields, lost: fields.lost || 0 }, true);
+        const key = bookCode(book.isbn);
+        check(!seen.has(key), 'ISBN / kode koleksi ganda dalam file.');
+        seen.add(key);
+        input.push({ ...book, location });
+      } catch (error) {
+        errors.push({ location, message: error.message });
+      }
+    }
+  }
+  check(rowCount, 'File belum berisi data buku.');
+  const commit = req.params.action === 'commit';
+  const result = await transaction(async (db) => {
+    const matched = await findBooks(input, db, commit);
+    const valid = [];
+    for (const book of input) {
+      const existing = matched.get(book.isbn);
+      const borrowed = await borrowedCopies(existing?.id, db);
+      try {
+        const stock = availableStock(book, borrowed);
+        valid.push({ book, id: existing?.id, stock });
+      } catch (error) {
+        errors.push({ location: book.location, message: error.message });
+      }
+    }
+    const entries = valid.map(({ book, id }) => ({
+      location: book.location, isbn: book.isbn, title: book.title, action: id ? 'Perbarui buku' : 'Tambah buku',
+    }));
+    const preview = bookPreview(req, entries, errors, valid.map(({ id }) => id || null));
+    if (canApplyBookBatch(req, preview)) {
+      for (const item of valid) await persistBook(item.book, item.stock, item.id, db);
+      preview.saved = true;
+    }
+    return preview;
+  });
+  sendBookPreview(req, res, result);
+}
+router.post('/books/import/:action(preview|commit)', express.raw({ type: mime, limit: '4mb', inflate: false }), wrap(importBooks));
+
+const bundledCoverFolder = path.resolve(__dirname, '../../../frontend/src/assets/sampul-buku');
+const assetKey = (value) => value.replace(/[^a-z0-9]/gi, '').toLowerCase();
+async function importBookCovers(req, res) {
+  check(Buffer.isBuffer(req.body) && req.body.length, 'Pilih file ZIP sampul.');
+  let parts;
+  try {
+    parts = await readZip(req.body, {
+      entryLimit: 250,
+      byteLimit: 50 * 1024 * 1024,
+      accept: (name) => !name.endsWith('/') && !name.startsWith('__MACOSX/') && path.posix.basename(name) !== '.DS_Store',
+    });
+  } catch {
+    check(false, 'ZIP tidak bisa dibaca. Gunakan maksimal 250 file dengan total isi hingga 50 MB.');
+  }
+  check(parts.size, 'ZIP belum berisi sampul.');
+  const errors = [], input = [], seen = new Set();
+  for (const [location, file] of parts) {
+    const filename = path.posix.basename(location);
+    const suffix = path.posix.extname(filename);
+    try {
+      check(/\.(jpe?g|png|webp)$/i.test(suffix), 'Gunakan file JPG, PNG, atau WebP.');
+      const isbn = str(filename.slice(0, -suffix.length), 50, 'ISBN / kode koleksi');
+      const key = bookCode(isbn);
+      check(!seen.has(key), 'Ada lebih dari satu sampul untuk kode ini.');
+      seen.add(key);
+      const extension = validateCover(file);
+      check(suffix.toLowerCase().replace('.jpeg', '.jpg') === '.' + extension, 'Ekstensi file tidak cocok dengan format gambar.');
+      input.push({ location, isbn, file, extension });
+    } catch (error) {
+      errors.push({ location, message: error.message });
+    }
+  }
+  const assets = await fs.readdir(bundledCoverFolder).catch((error) => {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  });
+  const bundled = new Set(assets.filter((name) => /\.(jpe?g|png|webp|avif)$/i.test(name))
+    .map((name) => assetKey(path.parse(name).name)));
+  const commit = req.params.action === 'commit';
+  const result = await withCoverUploads((store) => transaction(async (db) => {
+    const matched = await findBooks(input, db, commit);
+    const valid = [];
+    for (const image of input) {
+      const book = matched.get(image.isbn);
+      if (book) valid.push({ image, book });
+      else errors.push({ location: image.location, message: 'Kode koleksi "' + image.isbn + '" belum terdaftar.' });
+    }
+    const entries = valid.map(({ image, book }) => ({
+      location: image.location, isbn: image.isbn, title: book.title,
+      action: book.cover_image || bundled.has(assetKey(image.isbn)) ? 'Ganti sampul' : 'Pasang sampul',
+    }));
+    const preview = bookPreview(req, entries, errors, valid.map(({ book }) => [book.id, book.cover_image]));
+    if (canApplyBookBatch(req, preview)) {
+      for (const { image, book } of valid) {
+        const url = await store(image.file, image.extension);
+        await rows('UPDATE books SET cover_image=? WHERE id=?', [url, book.id], db);
+      }
+      preview.saved = true;
+    }
+    return preview;
+  }));
+  sendBookPreview(req, res, result);
+}
+router.post('/books/covers/:action(preview|commit)', express.raw({ type: 'application/zip', limit: '30mb', inflate: false }), wrap(importBookCovers));
+
+router.get('/classes', wrap(async (req, res) => {
+  res.json(await rows(
+    'SELECT c.id,c.name,COUNT(m.id) student_count FROM classes c LEFT JOIN members m ON m.class_id=c.id GROUP BY c.id,c.name ORDER BY c.name',
+  ));
+}));
+async function saveClass(req, res) {
+  const name = str(normalizeClassName(req.body.name), 60, 'Nama kelas');
+  const id = req.params.id ? integer(req.params.id, 1) : null;
+  try {
+    if (id) {
+      const result = await rows('UPDATE classes SET name=? WHERE id=?', [name, id]);
+      check(result.affectedRows, 'Kelas tidak ditemukan.', 404);
+      return res.json({ id, name });
+    }
+    const result = await rows('INSERT INTO classes(name) VALUES(?)', [name]);
+    res.status(201).json({ id: result.insertId, name });
+  } catch (error) {
+    check(error.code !== 'ER_DUP_ENTRY', 'Nama kelas sudah terdaftar.', 409);
+    throw error;
+  }
+}
+router.post('/classes', wrap(saveClass));
+router.put('/classes/:id', wrap(saveClass));
+
+const students = `SELECT m.id,m.member_code,m.name,m.class_id,COALESCE(c.name,'') class_name,
+  m.phone,m.phone_owner,m.consent_at,m.status FROM members m LEFT JOIN classes c ON c.id=m.class_id
+  ORDER BY m.name,m.id`;
 router.get(
   '/members',
-  wrap(async (req, res) =>
-    res.json(
-      await rows(
-        'SELECT id,member_code,name,class_name,phone,phone_owner,consent_at,status FROM members ORDER BY name',
-      ),
-    ),
-  ),
+  wrap(async (req, res) => res.json(await rows(students))),
 );
-function memberValues(m) {
+function memberValues(m, requirePhone = false) {
   const raw = str(m.phone, 25, 'Nomor WhatsApp', false).replace(/[ +()-]/g, '');
   const phone = raw.replace(/^0/, '62');
   check(!phone || /^\d{8,15}$/.test(phone), 'Nomor WhatsApp tidak valid.');
+  check(!requirePhone || phone, 'Nomor WhatsApp wajib diisi.');
   check(!m.consent || phone, 'Isi nomor sebelum mencatat persetujuan.');
   check(['wali', 'siswa'].includes(m.phone_owner), 'Pilih pemilik nomor.');
   check(['active', 'inactive'].includes(m.status), 'Status siswa tidak valid.');
   return [
     str(m.member_code, 50, 'NIS'),
     str(m.name, 100, 'Nama'),
-    str(m.class_name, 60, 'Kelas'),
     phone,
     m.phone_owner,
     m.status,
   ];
 }
-async function persistMember(values, consent, id, db = pool) {
-  const phone = values[3], owner = values[4];
+async function persistMember(values, classId, consent, id, db) {
+  const phone = values[2], owner = values[3];
   if (id) {
     const r = await rows(
       `UPDATE members SET consent_at=IF(?,IF(phone=? AND phone_owner=?,COALESCE(consent_at,UTC_TIMESTAMP()),UTC_TIMESTAMP()),NULL),
-      member_code=?,name=?,class_name=?,phone=?,phone_owner=?,status=? WHERE id=?`,
+      member_code=?,name=?,phone=?,phone_owner=?,status=?,class_id=? WHERE id=?`,
       [
         consent,
         phone,
         owner,
         ...values,
+        classId,
         id,
       ],
       db,
@@ -251,80 +474,109 @@ async function persistMember(values, consent, id, db = pool) {
     return id;
   } else {
     const r = await rows(
-      'INSERT INTO members(member_code,name,class_name,phone,phone_owner,status,consent_at) VALUES(?,?,?,?,?,?,IF(?,UTC_TIMESTAMP(),NULL))',
-      [...values, consent],
+      'INSERT INTO members(member_code,name,phone,phone_owner,status,class_id,consent_at) VALUES(?,?,?,?,?,?,IF(?,UTC_TIMESTAMP(),NULL))',
+      [...values, classId, consent],
       db,
     );
     return r.insertId;
   }
 }
 async function saveMember(req, res) {
-  const id = await persistMember(memberValues(req.body), req.body.consent === true,
-    req.params.id ? integer(req.params.id, 1) : null);
+  const values = memberValues(req.body);
+  const id = await transaction(async (db) => {
+    const [item] = req.body.class_id != null
+      ? await rows('SELECT id FROM classes WHERE id=? FOR SHARE', [integer(req.body.class_id, 1)], db)
+      : await rows('SELECT id FROM classes WHERE name=? FOR SHARE',
+        [str(normalizeClassName(req.body.class_name), 60, 'Kelas')], db);
+    check(item, 'Pilih kelas yang sudah terdaftar.');
+    return persistMember(values, item.id, req.body.consent === true,
+      req.params.id ? integer(req.params.id, 1) : null, db);
+  });
   res.json({ id });
 }
 const sheetUpload = express.raw({ type: mime, limit: '4mb' });
-async function sendWorkbook(res, name, members) {
-  res.type(mime).attachment(name).send(await workbook(members));
+async function sendWorkbook(res, name, members, options) {
+  res.type(mime).attachment(name).send(await workbook(members, options));
 }
 router.get('/members/template.xlsx', wrap(async (req, res) =>
   sendWorkbook(res, 'Template-Data-Siswa-SIPUS.xlsx')));
 router.post('/members/export.xlsx', wrap(async (req, res) => {
   check(Array.isArray(req.body.ids), 'Daftar siswa tidak valid.');
   const ids = new Set(req.body.ids.map((id) => integer(id, 1)));
-  const members = await rows('SELECT member_code,name,class_name,phone,phone_owner,consent_at,status,id FROM members ORDER BY name,id');
-  await sendWorkbook(res, 'Data-Siswa-SIPUS.xlsx', members.filter((m) => ids.has(m.id)));
+  const members = await rows(students);
+  await sendWorkbook(res, 'Data-Siswa-SIPUS.xlsx', members.filter((m) => ids.has(m.id)), { byClass: true });
 }));
 
 async function importMembers(req, res) {
   check(Buffer.isBuffer(req.body) && req.body.length, 'Pilih file Excel .xlsx.');
-  let parsed;
+  let sheets;
   try {
-    parsed = await readWorkbook(req.body);
+    sheets = await readWorkbook(req.body);
   } catch (error) {
     check(false, error.message === 'Maksimal 5.000 siswa dalam satu impor.'
       ? error.message : 'File Excel tidak dapat dibaca. Gunakan template SIPUS.');
   }
-  const [header, ...data] = parsed;
-  check(header?.number === 1 && !header.hasFormula &&
-    columns.every((label, i) => label.toLowerCase() === header.values[i].trim().toLowerCase()),
-  'Kolom Excel tidak sesuai. Gunakan template SIPUS.');
+  const legacyColumns = [...columns.slice(0, -1), 'Izin WA', columns.at(-1)];
+  const data = [];
+  for (const { name, rows: [header, ...records] } of sheets) {
+    if (!header) continue;
+    const matchesColumns = (names) => names.length === header.values.length &&
+      names.every((label, i) => label.toLowerCase() === header.values[i].trim().toLowerCase());
+    const legacy = matchesColumns(legacyColumns);
+    check(header.number === 1 && !header.hasFormula && (legacy || matchesColumns(columns)),
+      'Kolom pada sheet "' + name + '" tidak sesuai dengan template SIPUS.');
+    data.push(...records.map((record) => ({ ...record, sheet: name, legacy })));
+  }
   check(data.length, 'File belum berisi data siswa.');
   const errors = [], valid = [];
   const nisKey = (nis) => nis.normalize('NFKD').replace(/\p{M}/gu, '').toLowerCase();
   const seen = new Set();
-  for (const { number, values, hasFormula } of data) {
-    const [member_code, name, class_name, phone, owner, permission, status] = values.map((v) => v.trim());
+  for (const { sheet, legacy, number, values, hasFormula } of data) {
+    const fields = values.map((v) => v.trim());
+    const [member_code, name, class_name, phone, owner] = fields;
+    const status = (fields[legacy ? 6 : 5] || '').toLowerCase();
+    const permission = legacy ? (fields[5] || '').toLowerCase() : 'ya';
     try {
       check(!hasFormula, 'Masukkan nilai langsung tanpa rumus atau sel error.');
-      check(['', 'ya', 'tidak'].includes(permission.toLowerCase()), 'Izin WA harus Ya, Tidak, atau kosong.');
-      check(['', 'aktif', 'nonaktif'].includes(status.toLowerCase()), 'Status harus Aktif atau Nonaktif.');
-      const consent = permission.toLowerCase() === 'ya';
-      check(!phone || owner, 'Isi pemilik nomor jika nomor WA diisi.');
+      check(['', 'ya', 'tidak'].includes(permission), 'Izin WA pada template lama harus Ya, Tidak, atau kosong.');
+      check(['', 'aktif', 'nonaktif'].includes(status), 'Status harus Aktif atau Nonaktif.');
+      check(owner, 'Pemilik nomor wajib diisi dengan Siswa atau Wali.');
+      const className = str(normalizeClassName(class_name), 60, 'Kelas');
+      const consent = permission === 'ya';
       const values = memberValues({
-        member_code, name, class_name, phone, consent,
-        phone_owner: owner.toLowerCase() || 'siswa',
-        status: status.toLowerCase() === 'nonaktif' ? 'inactive' : 'active',
-      });
+        member_code, name, phone, consent,
+        phone_owner: owner.toLowerCase(),
+        status: status === 'nonaktif' ? 'inactive' : 'active',
+      }, true);
       const key = nisKey(member_code);
       check(!seen.has(key), 'NIS ganda dalam file.');
       seen.add(key);
-      valid.push({ key, values, consent });
+      valid.push({ sheet, row: number, key, values, consent, className });
     } catch (error) {
-      errors.push({ row: number, message: error.message });
+      errors.push({ sheet, row: number, message: error.message });
     }
   }
   const commit = req.params.action === 'commit';
   const result = await transaction(async (db) => {
+    const classes = await rows('SELECT id,name FROM classes' + (commit ? ' FOR SHARE' : ''), [], db);
+    const classByName = new Map(classes.map((item) => [classKey(item.name), item.id]));
+    const resolved = [];
+    for (const item of valid) {
+      const classId = classByName.get(classKey(item.className));
+      if (classId) resolved.push({ ...item, classId });
+      else errors.push({ sheet: item.sheet, row: item.row, message: 'Kelas "' + item.className + '" belum terdaftar.' });
+    }
+    const sheetOrder = new Map(sheets.map((sheet, i) => [sheet.name, i]));
+    errors.sort((a, b) => sheetOrder.get(a.sheet) - sheetOrder.get(b.sheet) || a.row - b.row);
     const existing = await rows('SELECT id,member_code FROM members ORDER BY id' +
       (commit && !errors.length ? ' FOR UPDATE' : ''), [], db);
     const byNis = new Map(existing.map((m) => [nisKey(m.member_code), m.id]));
-    const update = valid.filter((entry) => byNis.has(entry.key)).length;
+    const update = resolved.filter((entry) => byNis.has(entry.key)).length;
     if (commit && !errors.length) {
-      for (const item of valid)
-        await persistMember(item.values, item.consent, byNis.get(item.key), db);
+      for (const item of resolved)
+        await persistMember(item.values, item.classId, item.consent, byNis.get(item.key), db);
     }
-    return { add: valid.length - update, update, errors, saved: commit && !errors.length };
+    return { add: resolved.length - update, update, errors, saved: commit && !errors.length };
   });
   res.json(result);
 }

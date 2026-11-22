@@ -4,6 +4,7 @@ const cors = require('cors');
 const { pool } = require('./config/db');
 const { router, wrap } = require('./routes/library');
 const reminders = require('./reminders');
+const { coverPrefix, coverFolder, coverName } = require('./utils/book-covers');
 const { successResponse, errorResponse } = require('./utils/response');
 const app = express();
 app.use(cors({ origin: /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/ }));
@@ -21,6 +22,13 @@ app.get(
 reminders.routes(router);
 app.use('/api', router);
 app.use('/api', (req, res) => errorResponse(res, 'Rute tidak ditemukan.', 404));
+app.get(coverPrefix + ':name', (req, res, next) => {
+  if (!coverName.test(req.params.name)) return res.sendStatus(404);
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.sendFile(req.params.name, { root: coverFolder, immutable: true, maxAge: '1y' }, (error) => {
+    if (error) next(error);
+  });
+});
 const dist = path.resolve(__dirname, '../../frontend/dist');
 app.use(express.static(dist));
 app.get('*', (req, res) => res.sendFile(path.join(dist, 'index.html')));

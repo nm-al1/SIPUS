@@ -1,16 +1,8 @@
 import React, { useState } from 'react';
 import { Dialog, Field, Status, Table } from './Common';
 import api from '../services/api';
+import download from '../services/download';
 const xlsx = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-
-function download(file, name) {
-  const url = URL.createObjectURL(file);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = name;
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export default function StudentExcel({ students, reload }) {
   const [open, setOpen] = useState(false);
@@ -88,7 +80,7 @@ export default function StudentExcel({ students, reload }) {
                 setError('');
               }} />
             </Field>
-            <p>Gunakan kolom pada template. Izin WA diisi Ya jika siswa atau wali sudah menyetujui nomor tersebut. Kolom izin kosong menonaktifkan pengingat.</p>
+            <p>Gunakan nama kelas yang terdaftar. Isi nomor WhatsApp dan pilih pemiliknya, Siswa atau Wali. Kontak dari template baru akan dipakai untuk pengingat otomatis. Gunakan kontak yang sudah ditetapkan sekolah untuk pengingat.</p>
             {preview && (
               <>
                 <Status error={Boolean(preview.errors.length)}>
@@ -96,16 +88,19 @@ export default function StudentExcel({ students, reload }) {
                 </Status>
                 {preview.errors.length > 0 && (
                   <Table pageSize={10} label="Kesalahan impor"
-                    headers={['Baris Excel', 'Kesalahan']}
-                    rows={preview.errors.map((e) => ({ id: e.row, cells: [e.row, e.message] }))} />
+                    headers={['Sheet', 'Baris Excel', 'Kesalahan']}
+                    rows={preview.errors.map((e) => ({
+                      id: (e.sheet || '') + ':' + e.row,
+                      cells: [e.sheet || 'Siswa', e.row, e.message],
+                    }))} />
                 )}
               </>
             )}
             <Status error>{error}</Status>
             <div className="actions">
               <button type="button" className="secondary" disabled={Boolean(busy)} onClick={() => reset(false)}>Batal</button>
-              <button disabled={!file || Boolean(busy) || Boolean(preview?.errors.length)}>
-                {busy ? 'Memproses…' : preview ? 'Simpan hasil impor' : 'Periksa file'}
+              <button disabled={!file || Boolean(busy)}>
+                {busy ? 'Memproses…' : preview && !preview.errors.length ? 'Simpan hasil impor' : 'Periksa file'}
               </button>
             </div>
           </form>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BookOpen } from 'lucide-react';
+import api from '../services/api';
 
 const files = import.meta.glob('../assets/**/*.{png,jpg,jpeg,webp,avif,PNG,JPG,JPEG,WEBP,AVIF}', {
   eager: true, query: '?url', import: 'default',
@@ -16,13 +17,16 @@ const sizes = {
 };
 
 export default function BookCover({ book, size = 'thumbnail' }) {
-  const url = byIsbn.get(key(book.isbn));
-  const [failed, setFailed] = React.useState(null);
+  const [failed, setFailed] = React.useState([]);
+  const uploaded = /^\/uploads\/sampul-buku\/[\da-f-]{36}\.(jpg|png|webp)$/.test(book.cover_image || '')
+    ? new URL(book.cover_image, new URL(api.defaults.baseURL, window.location.origin)).href
+    : null;
+  const url = [uploaded, byIsbn.get(key(book.isbn))].find((source) => source && !failed.includes(source));
   const [width, height] = sizes[size];
   const detail = size === 'detail';
   const className = 'book-cover book-cover-' + size;
-  return url && failed !== url ? (
-    <img className={className} src={url} alt={detail ? 'Sampul ' + book.title : ''} width={width} height={height} loading={detail ? 'eager' : 'lazy'} onError={() => setFailed(url)} />
+  return url ? (
+    <img className={className} src={url} alt={detail ? 'Sampul ' + book.title : ''} width={width} height={height} loading={detail ? 'eager' : 'lazy'} onError={() => setFailed((sources) => [...sources, url])} />
   ) : (
     <span className={className} aria-hidden="true"><BookOpen size={size === 'thumbnail' ? 15 : 30} /></span>
   );

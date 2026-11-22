@@ -76,9 +76,9 @@ const screens = [
     '/siswa',
     'Data siswa',
     'Data siswa',
-    'Kelola identitas siswa, kontak wali, dan persetujuan pengingat.',
+    'Kelola identitas, kontak, dan data Excel siswa.',
     Users,
-    ['members'],
+    ['members', 'classes'],
   ],
   [
     '/whatsapp',
@@ -135,7 +135,7 @@ function Workspace({ screen }) {
       case '/buku':
         return <Master data={props.books} reload={reload} />;
       case '/siswa':
-        return <Master students data={props.members} reload={reload} />;
+        return <Master students data={props.members} classes={props.classes} reload={reload} />;
       case '/whatsapp':
         return <WhatsApp info={props.reminders} reload={reload} />;
       case '/laporan':

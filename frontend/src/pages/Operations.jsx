@@ -122,8 +122,8 @@ export function WhatsApp({ info, reload }) {
         </div>
         <p>
           SIPUS memeriksa pinjaman setiap menit. Pengiriman dimulai pukul 09.00
-          WITA pada hari sekolah sebelum jatuh tempo, bagi siswa yang menyetujui
-          pengingat.
+          WITA pada hari sekolah sebelum jatuh tempo, ke nomor siswa atau wali
+          yang aktif untuk pengingat.
         </p>
       </section>
       <div className="sectionhead">

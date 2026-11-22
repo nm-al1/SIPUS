@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Plus } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Field,
   Dialog,
@@ -11,7 +12,10 @@ import {
 } from '../components/Common';
 import api from '../services/api';
 import BookCover from '../components/BookCover';
+import BookCoverField from '../components/BookCoverField';
+import BookBatch from '../components/BookBatch';
 import StudentExcel from '../components/StudentExcel';
+import ClassDirectory from '../components/ClassDirectory';
 
 const bookFields = [
   ['title', 'Judul buku'],
@@ -26,22 +30,33 @@ const bookFields = [
 const studentFields = [
   ['member_code', 'Nomor induk siswa'],
   ['name', 'Nama siswa'],
-  ['class_name', 'Kelas'],
   ['phone', 'Nomor WhatsApp', 'tel'],
 ];
-export default function Master({ students = false, data, reload }) {
+export default function Master({ students = false, data, classes = [], reload }) {
+  const [params, setParams] = useSearchParams();
   const [q, setQ] = useState(''),
     [status, setStatus] = useState(''),
-    [classFilter, setClassFilter] = useState(''),
     [edit, setEdit] = useState(null),
+    [cover, setCover] = useState(null),
     [busy, setBusy] = useState(false),
     [error, setError] = useState('');
   const resource = students ? 'members' : 'books',
     label = students ? 'siswa' : 'buku';
+  const requestedClass = students ? params.get('kelas') : null;
+  const selectedClass = classes.find((item) => String(item.id) === requestedClass);
+  const classFilter = requestedClass === 'tanpa-kelas' || selectedClass ? requestedClass : '';
+  function selectClass(id) {
+    const next = new URLSearchParams(params);
+    if (id) next.set('kelas', id);
+    else next.delete('kelas');
+    setParams(next);
+  }
   const begin = (row) => {
     setError('');
+    setCover(null);
     setEdit({
       ...row,
+      class_id: row.id ? row.class_id : selectedClass?.id,
       consent: Boolean(row.consent_at),
       phone_owner: row.phone_owner || 'siswa',
       status: row.status || 'active',
@@ -59,8 +74,15 @@ export default function Master({ students = false, data, reload }) {
     setBusy(true);
     setError('');
     try {
-      if (edit.id) await api.put('/' + resource + '/' + edit.id, edit);
-      else await api.post('/' + resource, edit);
+      let payload = edit;
+      if (!students && cover) {
+        if (cover.size > 5 * 1024 * 1024) throw new Error('Ukuran sampul maksimal 5 MB.');
+        payload = new FormData();
+        payload.append('data', JSON.stringify(edit));
+        payload.append('cover', cover);
+      }
+      if (edit.id) await api.put('/' + resource + '/' + edit.id, payload);
+      else await api.post('/' + resource, payload);
       setEdit(null);
       reload('Data ' + label + ' tersimpan.');
     } catch (e) {
@@ -89,7 +111,8 @@ export default function Master({ students = false, data, reload }) {
   }
   const filtered = data.filter(
     (r) =>
-      (!students || !classFilter || r.class_name === classFilter) &&
+      (!students || !classFilter ||
+        (classFilter === 'tanpa-kelas' ? r.class_id == null : String(r.class_id) === classFilter)) &&
       (!status ||
         (students
           ? r.status === status
@@ -111,6 +134,16 @@ export default function Master({ students = false, data, reload }) {
   );
   return (
     <>
+      {students && (
+        <ClassDirectory
+          classes={classes}
+          total={data.length}
+          unassigned={data.filter((row) => row.class_id == null).length}
+          selected={classFilter}
+          onSelect={selectClass}
+          reload={reload}
+        />
+      )}
       <div className="toolbar list-toolbar">
         <SearchBox
           value={q}
@@ -139,20 +172,14 @@ export default function Master({ students = false, data, reload }) {
             </>
           )}
         </select>
-        {students && (
-          <select aria-label="Kelas" value={classFilter} onChange={(e) => setClassFilter(e.target.value)}>
-            <option value="">Semua kelas</option>
-            {[...new Set(data.map((r) => r.class_name).filter(Boolean))]
-              .sort((a, b) => a.localeCompare(b, 'id'))
-              .map((name) => <option key={name}>{name}</option>)}
-          </select>
-        )}
         <button onClick={() => begin({})}>
           <Plus size={18} />
           Tambah {label}
         </button>
       </div>
-      {students && <StudentExcel students={filtered} reload={reload} />}
+      {students
+        ? <StudentExcel students={filtered} reload={reload} />
+        : <BookBatch books={filtered} reload={reload} />}
       <section className="panel flush">
         <Table
           pageSize={10}
@@ -190,9 +217,9 @@ export default function Master({ students = false, data, reload }) {
                 ? [
                     <b>{r.name}</b>,
                     r.member_code,
-                    r.class_name,
+                    r.class_name || 'Belum Ada Kelas',
                     <Tag tone={r.consent_at ? '' : 'neutral'}>
-                      {r.consent_at ? 'Disetujui' : 'Belum disetujui'}
+                      {r.consent_at ? 'Siap' : 'Belum aktif'}
                     </Tag>,
                     <Tag tone={r.status === 'active' ? '' : 'neutral'}>
                       {r.status === 'active' ? 'Aktif' : 'Nonaktif'}
@@ -242,7 +269,6 @@ export default function Master({ students = false, data, reload }) {
                         'lost',
                         'name',
                         'member_code',
-                        'class_name',
                       ].includes(name)}
                       value={edit[name] ?? ''}
                       onChange={(e) => change(name, e.target.value)}
@@ -252,6 +278,17 @@ export default function Master({ students = false, data, reload }) {
               )}
               {students && (
                 <>
+                  <Field label="Kelas">
+                    <select
+                      aria-label="Kelas"
+                      required
+                      value={edit.class_id ?? ''}
+                      onChange={(e) => change('class_id', e.target.value)}
+                    >
+                      <option value="" disabled>Pilih kelas</option>
+                      {classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+                    </select>
+                  </Field>
                   <Field label="Pemilik nomor">
                     <select
                       value={edit.phone_owner}
@@ -273,16 +310,7 @@ export default function Master({ students = false, data, reload }) {
                 </>
               )}
             </div>
-            {students && (
-              <label className="check consent-check">
-                <input
-                  type="checkbox"
-                  checked={edit.consent}
-                  onChange={(e) => change('consent', e.target.checked)}
-                />{' '}
-                Pemilik nomor menyetujui pengingat WhatsApp.
-              </label>
-            )}
+            {!students && <BookCoverField book={edit} file={cover} onChange={setCover} disabled={busy} />}
             <Status error>{error}</Status>
             <div className="actions">
               {!students && edit.id && !edit.archived && (

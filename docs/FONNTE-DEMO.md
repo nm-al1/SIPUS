@@ -16,8 +16,8 @@ FONNTE_TOKEN=isi_token_perangkat_di_sini
 
 ## Kirim ke HP penguji
 
-1. Buka **Data siswa**, cari NIS **240103** (Aulia Rahma, data contoh), pilih **Ubah**. Isi nomor WhatsApp HP penerima, misalnya dalam format 08… atau 628…, lalu pilih pemilik nomor. Setelah mendapat izin, centang persetujuan dan simpan. Perubahan tujuan mengharuskan petugas mencatat persetujuan kembali.
-2. Dari folder `backend`, jalankan pemeriksaan kesiapan. Perintah ini membaca persetujuan penerima, status perangkat, dan kuota melalui API profil Fonnte. [API profil perangkat Fonnte](https://docs.fonnte.com/api-device-profile/)
+1. Di **Data siswa**, cari NIS **240103** (Aulia Rahma, data contoh) dan ekspor barisnya. Setelah penguji setuju menerima pesan, isi **Nomor WA** dan **Pemilik Nomor** pada file Excel. Impor kembali baris tersebut untuk mengaktifkan pengingat pada kontak uji.
+2. Dari folder `backend`, jalankan pemeriksaan kesiapan. Perintah ini memeriksa apakah pengingat aktif untuk kontak uji, serta memeriksa status perangkat dan kuota melalui API profil Fonnte. [API profil perangkat Fonnte](https://docs.fonnte.com/api-device-profile/)
 
 ```powershell
 npm.cmd run demo:wa -- --check
@@ -39,8 +39,8 @@ npm.cmd run demo:wa
 - **Koneksi ditolak (EACCES)**. Buka PowerShell dari menu Start Windows dan jalankan `npm.cmd run demo:wa -- --check` dari folder `backend`. Tes dari terminal Codex dapat memakai aturan jaringan yang berbeda dari terminal Windows biasa.
 - **Gagal**. Baca alasan gateway, periksa perangkat, kuota, dan nomor penerima. Setelah diperbaiki, pilih **Coba ulang** selama pinjaman masih memenuhi syarat.
 - **Belum tahu**. Cocokkan waktu, nomor tujuan, dan isi pesan di riwayat Fonnte dan HP penerima. Jika pesan sudah terlihat di HP, gunakan **Konfirmasi dari HP**. Status ini tidak tersedia untuk kirim ulang otomatis.
-- **Tidak ada pengiriman**. Periksa persetujuan dan status aktif siswa, serta apakah transaksi sudah dikembalikan. Penjadwal reguler berjalan setiap menit selama backend hidup dan mulai mengirim pada H-1 hari sekolah pukul 09.00 WITA. Jika jatuh tempo Senin, jadwal biasanya Jumat sebelumnya. Jadwal yang terlewat dan sudah mencapai tanggal jatuh tempo dicatat sebagai **Dilewati**.
+- **Tidak ada pengiriman**. Periksa status pengingat, status aktif siswa, dan apakah transaksi sudah dikembalikan. Penjadwal reguler berjalan setiap menit selama backend hidup dan mulai mengirim pada H-1 hari sekolah pukul 09.00 WITA. Jika jatuh tempo Senin, jadwal biasanya Jumat sebelumnya. Jadwal yang terlewat dan sudah mencapai tanggal jatuh tempo dicatat sebagai **Dilewati**.
 
-Jika percobaan hari ini berstatus **Belum tahu** dan belum memiliki ID Fonnte, ganti nomor WhatsApp NIS 240103 dengan nomor penerima lain yang setuju. Simpan persetujuan untuk nomor baru, lalu jalankan `npm.cmd run demo:wa -- --check` dari PowerShell Windows. Setelah berhasil, jalankan `npm.cmd run demo:wa -- --penerima-baru` untuk mengirim satu uji baru ke nomor tersebut. SIPUS menyimpan log sebelumnya dan memakai satu pinjaman uji baru untuk hari itu.
+Jika percobaan hari ini berstatus **Belum tahu** dan belum memiliki ID Fonnte, impor ulang baris NIS 240103 dengan nomor penerima lain yang setuju. Jalankan `npm.cmd run demo:wa -- --check` dari PowerShell Windows. Setelah berhasil, jalankan `npm.cmd run demo:wa -- --penerima-baru` untuk mengirim satu uji baru ke nomor tersebut. SIPUS menyimpan log sebelumnya dan memakai satu pinjaman uji baru untuk hari itu.
 
-Setelah demo, cabut persetujuan pada data siswa jika penguji selesai berpartisipasi. Untuk menghentikan pengiriman otomatis, kosongkan `FONNTE_TOKEN` pada file konfigurasi.
+Setelah demo, hapus nomor penguji dari form **Ubah Siswa** pada data contoh untuk menonaktifkan pengingat kontak itu. Untuk menghentikan pengiriman otomatis, kosongkan `FONNTE_TOKEN` pada file konfigurasi.
