@@ -1,4 +1,7 @@
 -- Database: perpusku_db
+-- Skema DASAR saja. Tabel sessions, reminders, reminder_attempts dan beberapa kolom
+-- (quantity, received_date, lost, shelf, dst.) ditambahkan oleh `npm run setup`.
+-- Jangan import file ini langsung; jalankan `npm run setup` di folder backend.
 CREATE DATABASE IF NOT EXISTS perpusku_db;
 USE perpusku_db;
 

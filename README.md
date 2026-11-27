@@ -42,7 +42,7 @@ Perpusku/
 │   │   ├── routes/                # Router REST API
 │   │   ├── utils/                 # Response formatter & helper
 │   │   └── server.js              # Entry point server Express
-│   ├── database.sql               # Skema database MySQL
+│   ├── database.sql               # Skema dasar MySQL (jangan di-import langsung; buat database dengan `npm run setup`)
 │   ├── .env.example
 │   └── package.json
 │
