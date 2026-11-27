@@ -78,7 +78,7 @@ function BorrowingGuide() {
         <h3>Ketentuan peminjaman</h3>
         <ul>
           <li>
-            Masa pinjam lima hari sekolah. Hari peminjaman dihitung sebagai hari
+            Masa pinjam tiga hari sekolah. Hari peminjaman dihitung sebagai hari
             pertama jika jatuh pada hari sekolah. Sabtu, Minggu, dan hari libur
             nasional dilewati.
           </li>

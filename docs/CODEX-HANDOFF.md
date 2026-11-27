@@ -35,7 +35,7 @@ Dokumen ini adalah cetak biru teknis resmi dari **UI/UX Designer & Architect** u
 | **04** | `04_Dashboard_Petugas` | 1440 × 1080 | `/dashboard` | **Petugas & Pustakawan**: 4 kartu metrik operasional dan tabel tindak lanjut prioritas pinjaman terlambat & H-1 dengan tombol aksi sekali klik. |
 | **05** | `05_Buku_dan_Stok_CRUD` | 1440 × 1080 | `/buku` | **Petugas Sirkulasi**: Kelola buku & stok (Aturan A-06: Total, Pinjam, Hilang, Tersedia) serta form tambah/edit koleksi. |
 | **06** | `06_Data_Siswa_dan_Persetujuan_WA` | 1440 × 1080 | `/siswa` | **Petugas Sirkulasi**: Kelola database siswa, kontak WhatsApp wali/siswa, dan status izin pengingat otomatis. |
-| **07** | `07_Peminjaman_dan_Validasi_Tunggakan` | 1440 × 1080 | `/sirkulasi/pinjam` | **Meja Kerja Sirkulasi**: Verifikasi NIS & status tunggakan (A-05A), pilih buku, kalkulasi 5 hari sekolah, dan simpan atomik. |
+| **07** | `07_Peminjaman_dan_Validasi_Tunggakan` | 1440 × 1080 | `/sirkulasi/pinjam` | **Meja Kerja Sirkulasi**: Verifikasi NIS & status tunggakan (A-05A), pilih buku, kalkulasi 3 hari sekolah, dan simpan atomik. |
 | **08** | `08_Pengembalian_dan_Penyelesaian_Denda` | 1440 × 1080 | `/sirkulasi/kembali` | **Meja Kerja Sirkulasi**: Verifikasi buku kembali, kalkulasi hari sekolah terlambat (A-04: Rp2.000/hari), pelunasan denda tunai di tempat. |
 | **09** | `09_Pengingat_WhatsApp_dan_Log_Status` | 1440 × 1080 | `/whatsapp` | **Petugas & Pustakawan**: Monitoring gateway WhatsApp H-1 (A-08), 4 status (Diterima, Diproses, Gagal, Belum Tahu), dan log retry. |
 | **10** | `10_Laporan_Filter_dan_Pratinjau_Cetak_A4` | 1440 × 1080 | `/laporan` | **Kepala Sekolah & Yayasan**: Generator laporan sirkulasi/inventaris dengan lembar pratinjau cetak A4 siap tandatangan Kepala Sekolah & Petugas. |
@@ -114,7 +114,7 @@ module.exports = {
 - **Kolom Kiri Bawah Banner:**
   - Header `SISTEM PERPUSTAKAAN DIGITAL` & `Perpustakaan SMK Mutiara Ilmu`.
   - Kartu pencarian katalog (`Pencarian Koleksi Buku & Referensi`) lengkap dengan tombol `Cari Buku` teal, chip filter (Semua, Produktif, Muatan Nasional, Literasi), serta checkbox `Hanya stok tersedia`.
-  - 4 kartu badge kebijakan: `AKSES SISWA` (Cukup NIS), `MASA PINJAM` (5 Hari Sekolah), `HARI LIBUR` (Sabtu-Minggu Off), dan `NOTIFIKASI` (WhatsApp Otomatis).
+  - 4 kartu badge kebijakan: `AKSES SISWA` (Cukup NIS), `MASA PINJAM` (3 Hari Sekolah), `HARI LIBUR` (Sabtu-Minggu Off), dan `NOTIFIKASI` (WhatsApp Otomatis).
 - **Kolom Kanan Bawah Banner (Identitas & Layanan SIPUS Digital):**
   - Kartu kontainer gelap dengan header logo SIPUS resmi, judul aksen emas `Identitas & Layanan SIPUS Digital`, dan keterangan terintegrasi.
   - 2 kartu fisik buku kejuruan berdampingan:
@@ -125,7 +125,7 @@ module.exports = {
 - **3 Langkah Prosedur:**
   1. *Pilih Buku Kejuruan di Rak:* Siswa mencari buku di katalog atau langsung ke rak fisik.
   2. *Bawa Buku ke Meja Sirkulasi:* Serahkan buku kepada petugas dan sebutkan NIS siswa.
-  3. *Validasi & Pengingat WhatsApp Otomatis:* Petugas memproses pinjaman 5 hari sekolah; jadwal jatuh tempo dikirimkan ke WhatsApp siswa.
+  3. *Validasi & Pengingat WhatsApp Otomatis:* Petugas memproses pinjaman 3 hari sekolah; jadwal jatuh tempo dikirimkan ke WhatsApp siswa.
 - **Card Ruang Kerja Sirkulasi Petugas:**
   - Penegasan bahwa seluruh pencatatan sirkulasi dilakukan langsung oleh petugas (tanpa presensi mandiri siswa).
   - Tombol CTA: `Masuk ke Ruang Kerja Petugas →` mengarahkan ke halaman login petugas.
@@ -137,7 +137,7 @@ module.exports = {
 | Kode Aturan | Nama Aturan Bisnis | Implementasi Validasi Sistem |
 | :---: | :--- | :--- |
 | **A-01** | Akses Katalog Tanpa Login Siswa | Rute `/` dan `/katalog` bersifat publik. Siswa tidak memiliki username/password. |
-| **A-02** | Masa Pinjam 5 Hari Sekolah | Hari peminjaman dihitung sebagai **Hari ke-1 (H1)**. Contoh: Pinjam Senin → Jatuh Tempo Jumat (jika tidak ada tanggal merah). |
+| **A-02** | Masa Pinjam 3 Hari Sekolah | Hari peminjaman dihitung sebagai **Hari ke-1 (H1)**. Contoh: Pinjam Senin → Jatuh Tempo Rabu (jika tidak ada tanggal merah). |
 | **A-03** | Pengecualian Hari Libur | Sabtu, Minggu, dan tanggal merah nasional otomatis dilewati dari perhitungan hari kerja pinjam dan denda. |
 | **A-04** | Tarif Denda Keterlambatan | Tarif Rp2.000 per buku untuk setiap hari sekolah yang terlambat. |
 | **A-05** | Validasi Tunggakan & Status Ditolak | Pada `/sirkulasi/pinjam`, jika siswa memiliki buku terlambat atau denda belum lunas, sistem menolak peminjaman baru sampai tunggakan selesai. |

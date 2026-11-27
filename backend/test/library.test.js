@@ -72,9 +72,9 @@ after(async () => {
   fs.rmdirSync(coverDir);
 });
 test('kalender Makassar mencakup akhir pekan, libur, tahun baru dan H-1', () => {
-  assert.equal(due('2026-11-16'), '2026-11-20');
-  assert.equal(due('2026-12-24'), '2026-12-31');
-  assert.equal(due('2026-12-31'), '2027-01-08');
+  assert.equal(due('2026-11-16'), '2026-11-18');
+  assert.equal(due('2026-12-24'), '2026-12-29');
+  assert.equal(due('2026-12-31'), '2027-01-06');
   assert.equal(reminderDay('2026-11-23'), '2026-11-20');
   assert.equal(lateDays('2026-12-24', '2026-12-28'), 1);
   assert.equal(
@@ -477,50 +477,48 @@ test('perpanjangan per transaksi mengikuti libur, pratinjau, dan pengingat', asy
   const day = wita().slice(0, 10);
   let monday = shift(day, 1);
   while (new Date(monday + 'T00:00:00Z').getUTCDay() !== 1) monday = shift(monday, 1);
-  while (due(monday) !== shift(monday, 4) ||
-      due(shift(monday, 3)) !== shift(monday, 9) ||
-      ![7, 8, 9, 10].every((n) => school(shift(monday, n)))) monday = shift(monday, 7);
-  const wednesday = shift(monday, 2), thursday = shift(monday, 3);
-  const nextMonday = shift(monday, 7), nextTuesday = shift(monday, 8), nextWednesday = shift(monday, 9);
+  while (![0, 1, 2, 3, 4, 7, 8].every((n) => school(shift(monday, n)))) monday = shift(monday, 7);
+  const wednesday = shift(monday, 2), thursday = shift(monday, 3), friday = shift(monday, 4);
+  const nextMonday = shift(monday, 7);
   await pool.execute('UPDATE borrowings SET borrow_date=?,due_date=? WHERE id=?', [monday, due(monday), a]);
   await pool.execute('UPDATE borrowings SET borrow_date=?,due_date=? WHERE id=?', [thursday, due(thursday), b]);
   assert.equal((await call('/calendar/holidays/' + wednesday, 'PUT', { label: 'Rabu libur' })).status, 200);
 
   const active = async (id) => (await call('/loans/active')).data.find((loan) => loan.id === id);
-  assert.equal((await active(a)).due_date, nextMonday);
-  assert.equal((await active(a)).remaining_school_days, lateDays(day, nextMonday, { [wednesday]: 'Libur' }));
-  assert.equal((await active(b)).due_date, nextWednesday);
+  assert.equal((await active(a)).due_date, thursday);
+  assert.equal((await active(a)).remaining_school_days, lateDays(day, thursday, { [wednesday]: 'Libur' }));
+  assert.equal((await active(b)).due_date, nextMonday);
   const url = '/loans/' + a + '/extension';
   const preview = (await call(url + '?days=1')).data;
-  assert.equal(preview.due_date, nextTuesday);
+  assert.equal(preview.due_date, friday);
   assert.equal((await call(url, 'PUT', preview)).status, 200);
   assert.equal((await active(a)).extension_days, 1);
-  assert.equal((await active(b)).due_date, nextWednesday);
+  assert.equal((await active(b)).due_date, nextMonday);
 
   const correction = (await call(url + '?days=2')).data;
-  assert.equal((await call('/calendar/holidays/' + nextMonday, 'PUT', { label: 'Senin libur' })).status, 200);
-  assert.equal((await active(a)).due_date, nextWednesday);
+  assert.equal((await call('/calendar/holidays/' + friday, 'PUT', { label: 'Jumat libur' })).status, 200);
+  assert.equal((await active(a)).due_date, nextMonday);
   const stale = await call(url, 'PUT', correction);
   assert.equal(stale.status, 409);
-  assert.equal(stale.data.preview.current_due_date, nextWednesday);
+  assert.equal(stale.data.preview.current_due_date, nextMonday);
   const messages = [];
   const send = async (_, message) => {
     messages.push(message);
     return ['Diproses', 'Simulasi', 'extended-a'];
   };
-  await tick(new Date(nextMonday + 'T01:00:00Z'), send, true, null, a);
-  await tick(new Date(nextTuesday + 'T01:00:00Z'), send, true, null, a);
+  await tick(new Date(wednesday + 'T01:00:00Z'), send, true, null, a);
+  await tick(new Date(thursday + 'T01:00:00Z'), send, true, null, a);
   assert.equal(messages.length, 1);
-  assert.ok(messages[0].includes(nextWednesday));
+  assert.ok(messages[0].includes(nextMonday));
   assert.equal((await call(url, 'PUT', stale.data.preview)).status, 200);
   assert.equal((await active(a)).extension_days, 2);
   const cancel = (await call(url + '?days=0')).data;
-  assert.equal(cancel.due_date, nextTuesday);
+  assert.equal(cancel.due_date, thursday);
   assert.equal((await call(url, 'PUT', cancel)).status, 200);
   assert.equal((await active(a)).extension_days, 0);
-  assert.equal((await active(a)).due_date, nextTuesday);
+  assert.equal((await active(a)).due_date, thursday);
   assert.equal((await call('/reminders')).data.logs.find((r) => r.loan_id === a).attempts.length, 1);
-  assert.equal((await call('/calendar/holidays/' + nextMonday, 'DELETE')).status, 200);
+  assert.equal((await call('/calendar/holidays/' + friday, 'DELETE')).status, 200);
   assert.equal((await call('/calendar/holidays/' + wednesday, 'DELETE')).status, 200);
 
   await pool.execute('UPDATE borrowings SET due_date=? WHERE id=?', [day, a]);

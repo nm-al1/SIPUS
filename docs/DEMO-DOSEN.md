@@ -33,7 +33,7 @@ Baris WhatsApp Aulia memakai bukti uji yang sudah dikonfirmasi pada database lap
 
 ## Aturan yang digunakan saat demo
 
-Masa pinjam lima hari sekolah menghitung hari pinjam sebagai hari pertama jika hari itu hari sekolah. Kalender Makassar melewati Sabtu, Minggu, dan libur nasional yang tercantum pada SKB 2026–2027. Cuti bersama dan libur khusus sekolah dapat berbeda menurut kalender mitra. Perbarui daftar di `backend/src/utils/calendar.js` untuk tahun berikutnya. [Libur nasional 2026](https://www2.kemenkopmk.go.id/pemerintah-tetapkan-17-hari-libur-nasional-dan-8-cuti-bersama-tahun-2026) · [Libur nasional 2027](https://www2.kemenkopmk.go.id/node/6441)
+Masa pinjam tiga hari sekolah menghitung hari pinjam sebagai hari pertama jika hari itu hari sekolah. Kalender Makassar melewati Sabtu, Minggu, dan libur nasional yang tercantum pada SKB 2026–2027. Cuti bersama dan libur khusus sekolah dapat berbeda menurut kalender mitra. Perbarui daftar di `backend/src/utils/calendar.js` untuk tahun berikutnya. [Libur nasional 2026](https://www2.kemenkopmk.go.id/pemerintah-tetapkan-17-hari-libur-nasional-dan-8-cuti-bersama-tahun-2026) · [Libur nasional 2027](https://www2.kemenkopmk.go.id/node/6441)
 
 Denda demo Rp2.000 × jumlah buku × hari sekolah terlambat. Sebagai asumsi demo, denda berhenti bertambah saat buku diterima secara fisik. Petugas melunasi seluruh denda untuk menutup transaksi. Satu transaksi mencatat satu judul dengan satu atau beberapa eksemplar yang dikembalikan bersama. Konfirmasi kebijakan ini dengan mitra sebelum penggunaan operasional.
 

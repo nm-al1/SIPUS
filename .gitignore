@@ -36,3 +36,6 @@ uploads/
 .agents/
 # Script bantu FigCraft (lokal saja)
 scratch/
+
+# Indeks CodeGraph (lokal)
+.codegraph/

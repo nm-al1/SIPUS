@@ -26,7 +26,7 @@ function due(start, extra) {
   let day = start;
   let counted = 0;
   while (true) {
-    if (school(day, extra) && ++counted === 5) return day;
+    if (school(day, extra) && ++counted === 3) return day;
     day = shift(day, 1);
   }
 }
